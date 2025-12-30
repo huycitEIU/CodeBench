@@ -15,8 +15,8 @@ public class TestResultRow {
 
     public TestResultRow(TestCase testCase) {
         this.testCase = testCase;
-        this.testName = new SimpleStringProperty(testCase.getName()); // Giả sử TestCase có getName()
-        this.status = new SimpleStringProperty("Waiting"); // Mặc định là Waiting
+        this.testName = new SimpleStringProperty(testCase.getName()); 
+        this.status = new SimpleStringProperty("Waiting"); // Mặc định 
         this.time = new SimpleStringProperty("");
         this.message = new SimpleStringProperty("");
     }

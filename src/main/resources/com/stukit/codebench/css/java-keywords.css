@@ -1,0 +1,63 @@
+/* 1. Cấu hình khung soạn thảo (Nền trắng, chữ đen) */
+.styled-text-area {
+    -fx-background-color: #FFFFFF;
+    -fx-text-fill: #000000;
+    -fx-font-family: 'Consolas', 'Menlo', 'Courier New', monospace; /* Hỗ trợ đa nền tảng tốt hơn */
+    -fx-font-size: 14px;
+}
+
+/* 2. Highlight dòng đang trỏ chuột (Màu xám cực nhạt) */
+/* Lưu ý: Class này thường là của RichTextFX */
+.paragraph-box:has-caret {
+    -fx-background-color: #F5F5F5;
+}
+
+/* 3. Màu vùng chọn (Bôi đen text) - Xanh dương nhạt chuẩn IntelliJ */
+.styled-text-area .selection {
+    /* Trong RichTextFX, selection là một Path, nên dùng -fx-fill để tô màu nền */
+    -fx-fill: #daedff;
+    -fx-stroke-width: 0;
+}
+
+/* --- ĐỊNH NGHĨA MÀU SYNTAX (IntelliJ Light Style) --- */
+
+/* Từ khóa (public, void, class...): Xanh dương đậm */
+.keyword {
+    -fx-fill: #0033B3;
+    -fx-font-weight: bold;
+}
+
+/* Chuỗi (String): Xanh lá đậm */
+.string {
+    -fx-fill: #067D17;
+}
+
+/* Comment: Xám và in nghiêng */
+.comment {
+    -fx-fill: #8C8C8C;
+    -fx-font-style: italic;
+}
+
+/* Các dấu chấm phẩy, ngoặc: Đen */
+.semicolon {
+    -fx-fill: #000000;
+}
+
+.paren { /* Ngoặc đơn () */
+    -fx-fill: #000000;
+}
+
+.brace { /* Ngoặc nhọn {} */
+    -fx-fill: #000000;
+}
+
+.bracket { /* Ngoặc vuông [] */
+    -fx-fill: #000000;
+}
+
+/* Số dòng (Line number) - Nếu dùng CodeArea */
+.lineno {
+    -fx-fill: #999999;
+    -fx-background-color: #FFFFFF;
+    -fx-padding: 0 5 0 5; /* Canh lề cho số dòng thoáng hơn */
+}

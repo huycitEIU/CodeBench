@@ -1,16 +1,139 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import javafx.geometry.Insets?>
-<?import javafx.scene.control.Label?>
-<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Font?>
 
-<?import javafx.scene.control.Button?>
-<VBox alignment="CENTER" spacing="20.0" xmlns:fx="http://javafx.com/fxml"
-      fx:controller="com.stukit.codebench.ui.controller.MainController">
-    <padding>
-        <Insets bottom="20.0" left="20.0" right="20.0" top="20.0"/>
-    </padding>
+<BorderPane
+        prefWidth="1000"
+        prefHeight="700"
+        xmlns="http://javafx.com/javafx/21"
+        xmlns:fx="http://javafx.com/fxml/1"
+        fx:controller="com.stukit.codebench.ui.controller.MainController">
 
-    <Label fx:id="welcomeText"/>
-    <Button text="Hello!" onAction="#onHelloButtonClick"/>
-</VBox>
+    <!-- ================= TOP TOOLBAR ================= -->
+    <top>
+        <HBox spacing="10" alignment="CENTER_LEFT"
+              style="-fx-background-color: #f4f4f4; -fx-padding: 10;">
+            <children>
+                <Button fx:id="btnImportTest" text="📂 Import Testcase"/>
+                <Button fx:id="btnImportCode" text="📄 Mở File Code"/>
+                <Button fx:id="btnAddTest" text="➕ Thêm thủ công"/>
+
+                <Region HBox.hgrow="ALWAYS"/>
+
+                <Label text="Time Limit (ms):"/>
+                <TextField fx:id="txtTimeLimit"
+                           text="1000"
+                           prefWidth="80"
+                           style="-fx-alignment: CENTER;"/>
+
+                <Region HBox.hgrow="ALWAYS"/>
+
+                <Button fx:id="btnRun"
+                        text="▶ RUN"
+                        style="-fx-background-color: #2ecc71;
+                               -fx-text-fill: white;
+                               -fx-font-weight: bold;"/>
+            </children>
+        </HBox>
+    </top>
+
+    <!-- ================= CENTER ================= -->
+    <center>
+        <SplitPane dividerPositions="0.6">
+            <items>
+
+                <!-- ===== CODE EDITOR PLACEHOLDER ===== -->
+                <StackPane fx:id="editorContainer"
+                           style="-fx-background-color: #2b2b2b;">
+                    <children>
+                        <Label text="Code Editor"
+                               textFill="WHITE"/>
+                    </children>
+                </StackPane>
+
+                <!-- ===== RESULT PANEL ===== -->
+                <VBox spacing="10">
+                    <padding>
+                        <Insets top="10" right="10" bottom="10" left="10"/>
+                    </padding>
+                    <children>
+
+                        <!-- SUMMARY -->
+                        <HBox spacing="10" alignment="CENTER_LEFT">
+                            <Label text="Kết quả:">
+                                <font>
+                                    <Font size="14" name="System Bold"/>
+                                </font>
+                            </Label>
+
+                            <Label fx:id="lblScore"
+                                   text="0 / 0"
+                                   textFill="#e74c3c">
+                                <font>
+                                    <Font size="14" name="System Bold"/>
+                                </font>
+                            </Label>
+
+                            <ProgressBar fx:id="progressBar"
+                                         progress="0"
+                                         prefWidth="160"/>
+                        </HBox>
+
+                        <!-- TESTCASE TABLE -->
+                        <TableView fx:id="tblResults"
+                                   VBox.vgrow="ALWAYS">
+
+                            <columns>
+                                <TableColumn fx:id="colName"
+                                             text="ID"
+                                             prefWidth="60"/>
+
+                                <TableColumn fx:id="colStatus"
+                                             text="Status"
+                                             prefWidth="120"/>
+
+                                <TableColumn fx:id="colRuntime"
+                                             text="Time (ms)"
+                                             prefWidth="100"/>
+                            </columns>
+
+                            <columnResizePolicy>
+                                <TableView fx:constant="CONSTRAINED_RESIZE_POLICY"/>
+                            </columnResizePolicy>
+                        </TableView>
+
+                    </children>
+                </VBox>
+
+            </items>
+        </SplitPane>
+    </center>
+
+    <!-- ================= BOTTOM STATUS BAR ================= -->
+    <bottom>
+        <HBox spacing="10" style="-fx-background-color: #dddddd;">
+            <padding>
+                <Insets top="5" right="5" bottom="5" left="5"/>
+            </padding>
+            <children>
+                <Label fx:id="lblStatus"
+                       text="Ready"/>
+
+                <Region HBox.hgrow="ALWAYS"/>
+
+                <Label fx:id="lblVersion"
+                       text="v1.0.0"
+                       style="-fx-text-fill: #888;
+                              -fx-font-size: 11;">
+                    <tooltip>
+                        <Tooltip text="Offline Judge System - StuKit CodeBench"/>
+                    </tooltip>
+                </Label>
+            </children>
+        </HBox>
+    </bottom>
+
+</BorderPane>

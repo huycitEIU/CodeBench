@@ -27,7 +27,7 @@ tasks.withType<JavaCompile> {
 
 application {
     mainModule.set("com.stukit.codebench")
-    mainClass.set("com.stukit.codebench.HelloApplication")
+    mainClass.set("com.stukit.codebench.Launcher")
 }
 
 javafx {
@@ -36,6 +36,7 @@ javafx {
 }
 
 dependencies {
+    implementation("org.fxmisc.richtext:richtextfx:0.11.1")
     implementation("org.kordamp.ikonli:ikonli-javafx:12.3.1")
     testImplementation("org.junit.jupiter:junit-jupiter-api:${junitVersion}")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:${junitVersion}")

@@ -1,0 +1,29 @@
+# Gradle
+.gradle/
+build/
+dist/
+jpackage/
+
+# IntelliJ
+.idea/
+*.iml
+out/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs & temp
+logs/
+*.log
+tmp/
+temp/
+
+# VS Code
+.vscode/
+
+# Executables
+*.exe
+*.msi
+*.dmg
+*.pkg

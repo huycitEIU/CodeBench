@@ -14,7 +14,7 @@ public class JavaRunner {
         // Tìm đường dẫn java (đảm bảo đa nền tảng)
         String javaPath = Path.of(System.getProperty("java.home"), "bin", "java").toString();
 
-        // Thêm tham số -Xmx để giới hạn bộ nhớ nếu cần (lấy từ sandbox)
+        // Thêm tham số -Xmx để giới hạn bộ nhớ (lấy từ sandbox)
         // Ví dụ: processBuilder.command(javaPath, "-Xmx256m", "-cp", ".", "Solution");
         ProcessBuilder processBuilder = new ProcessBuilder(javaPath, "-Dfile.encoding=UTF-8", "-cp", ".", "Solution");
         processBuilder.directory(workspaceRoot);
@@ -41,7 +41,7 @@ public class JavaRunner {
             } catch (IOException e) {
                 // "The pipe has been ended" thường xảy ra ở đây.
                 // Nghĩa là chương trình con đã đóng hoặc crash trước khi nhận hết input.
-                // Ta LỜ ĐI lỗi này để xuống dưới đọc nguyên nhân lỗi từ getErrorStream().
+                // LỜ ĐI lỗi này để xuống dưới đọc nguyên nhân lỗi từ getErrorStream().
             }
 
             // Đọc Output bất đồng bộ để tránh Deadlock

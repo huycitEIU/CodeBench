@@ -23,7 +23,6 @@ public class TestCaseImportService {
 
         // --- SỬA LOGIC SORT ---
         // Sắp xếp theo "Natural Order" (Số học) thay vì Alphabet
-        // Ví dụ: Sẽ xếp 1.in, 2.in, 10.in thay vì 1.in, 10.in, 2.in
         Arrays.sort(inputFiles, (f1, f2) -> {
             String name1 = getFileNameWithoutExtension(f1.getName());
             String name2 = getFileNameWithoutExtension(f2.getName());
@@ -57,8 +56,6 @@ public class TestCaseImportService {
             TestCase testCase = new TestCase(inputName, inputContent, expectedOutput);
             testCases.add(testCase);
         }
-
-        // --- SỬA LỖI THIẾU RETURN ---
         return testCases;
     }
 

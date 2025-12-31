@@ -1,7 +1,5 @@
 package com.stukit.codebench.infrastructure.fs;
 
-import com.stukit.codebench.service.FileIOService;
-
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -11,22 +9,13 @@ import java.util.Comparator;
 import java.util.stream.Stream;
 
 /**
- * Triển khai Workspace dựa trên thư mục tạm của hệ điều hành.
- *
- * <p>Mỗi TempWorkspace tương ứng với một thư mục vật lý riêng biệt,
- * được xoá hoàn toàn khi close().
- *
- * <p>Lớp này KHÔNG biết gì về compiler, runner hay sandbox.
- * Nó chỉ làm đúng một việc: quản lý filesystem.
+ * Implementation của Workspace sử dụng thư mục tạm.
+ * Tự động xóa toàn bộ thư mục khi gọi close().
  */
-public class TempWorkspace implements Workspace{
+public class TempWorkspace implements Workspace {
 
     private final Path root;
 
-    /**
-     *
-     * @param root thư mục gốc đã được tạo sẵn
-     */
     public TempWorkspace(Path root) {
         this.root = root;
     }
@@ -38,14 +27,21 @@ public class TempWorkspace implements Workspace{
 
     @Override
     public Path resolve(String relativePath) {
-        return root.resolve(relativePath);
+        // Path.resolve xử lý nối chuỗi đường dẫn an toàn
+        return root.resolve(relativePath).toAbsolutePath();
     }
 
     @Override
     public void write(String relativePath, String content) {
         try {
             Path file = resolve(relativePath);
-            Files.createDirectories(file.getParent());
+            Path parent = file.getParent();
+
+            // Tạo thư mục cha nếu chưa có (và nếu cha không phải là null)
+            if (parent != null && !Files.exists(parent)) {
+                Files.createDirectories(parent);
+            }
+
             Files.writeString(
                     file,
                     content,
@@ -72,25 +68,23 @@ public class TempWorkspace implements Workspace{
         }
     }
 
-    public void cleanup() {
-        if (!Files.exists(root)) return;
-
-        // Files.walk trả về Stream, phải đóng Stream này để thả lock folder
-        try (Stream<Path> walk = Files.walk(root)) {
-            walk.sorted(Comparator.reverseOrder()) // Xóa con trước, cha sau
-                    .map(Path::toFile)
-                    .forEach(java.io.File::delete);
-        } catch (IOException e) {
-            // Log lỗi nếu cần, nhưng thường thì cleanup thất bại không nên crash app
-            System.err.println("Warning: Failed to cleanup workspace " + root + ": " + e.getMessage());
-        }
-    }
-
     /**
-     * Xoá toànbojoj nội dung workspace theo thứ tự ngược (file -> thư mục)
+     * Đây là method quan trọng nhất để dọn rác.
+     * Được gọi tự động bởi try-with-resources thông qua close().
      */
     @Override
     public void close() {
-    }
+        if (!Files.exists(root)) return;
 
+        // Dùng try-with-resources cho Stream để tránh leak file handle
+        try (Stream<Path> walk = Files.walk(root)) {
+            walk.sorted(Comparator.reverseOrder()) // Quan trọng: Xóa con trước, cha sau
+                    .map(Path::toFile)
+                    .forEach(java.io.File::delete);
+        } catch (IOException e) {
+            // Chỉ log warning, không throw exception để tránh làm gián đoạn luồng chính
+            // (Ví dụ: file đang bị lock bởi tiến trình khác)
+            System.err.printf("[Warning] Không thể dọn dẹp workspace %s: %s%n", root, e.getMessage());
+        }
+    }
 }

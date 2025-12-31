@@ -1,7 +1,16 @@
 package com.stukit.codebench.infrastructure.runner;
 
-public class RunnerException extends Exception   {
-    public RunnerException(String massage, Throwable cause) {
-        super(massage, cause);
+import java.io.Serial;
+
+public class RunnerException extends Exception {
+    @Serial
+    private static final long serialVersionUID = 1L;
+
+    public RunnerException(String message) {
+        super(message);
+    }
+
+    public RunnerException(String message, Throwable cause) {
+        super(message, cause);
     }
 }

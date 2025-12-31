@@ -1,63 +1,86 @@
 package com.stukit.codebench.domain;
 
-import com.stukit.codebench.domain.TestCase;
-import javafx.beans.property.*;
-
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.StringProperty;
 import java.nio.file.Path;
 
+/**
+ * Model đại diện cho một dòng trong bảng kết quả.
+ * Kết nối giữa dữ liệu (TestCase) và giao diện (TableView).
+ */
 public class TestResultRow {
-    // 1. Tham chiếu ngược lại TestCase gốc (Để lấy Input/Expected khi cần)
+
+    // Dữ liệu gốc (Immutable Record)
     private final TestCase originalTestCase;
 
-    // 2. Các thông tin kết quả chạy (Dynamic)
-    private final SimpleStringProperty name; // Tên lấy từ TestCase
-    private final SimpleStringProperty status; // AC, WA, TLE, Running
-    private final SimpleStringProperty runtime;
+    // Các Property để Binding lên UI (TableView)
+    private final StringProperty name;
+    private final StringProperty status;
+    private final StringProperty runtime;
+    private final SimpleStringProperty memory;
 
-    // 3. Đường dẫn Output thực tế (Mới sinh ra sau khi chạy)
+    // Đường dẫn file output thực tế sinh ra sau khi chạy (có thể null nếu chưa chạy)
     private Path actualOutputPath;
 
     public TestResultRow(TestCase testCase) {
         this.originalTestCase = testCase;
 
-        // Khởi tạo mặc định cho UI
-        this.name = new SimpleStringProperty(testCase.getName());
+        // Lưu ý: Vì TestCase là Record nên dùng testCase.name()
+        this.name = new SimpleStringProperty(testCase.name());
+
+        // Trạng thái mặc định
         this.status = new SimpleStringProperty("Waiting...");
         this.runtime = new SimpleStringProperty("-");
+        this.memory = new SimpleStringProperty("-");
     }
 
-    // --- Setter cập nhật kết quả sau khi chạy xong ---
-    public void updateResult(String status, long timeMs, Path actualOutput) {
-        this.status.set(status);
+    /**
+     * Cập nhật kết quả cuối cùng (Sau khi chấm xong).
+     */
+    public void updateResult(String statusText, long timeMs, long memoryBytes, Path actualOutput) {
+        this.status.set(statusText);
         this.runtime.set(timeMs + " ms");
+        // Convert Bytes sang KB hoặc MB cho dễ đọc
+        double memMB = memoryBytes / 1024.0 / 1024.0;
+        this.memory.set(String.format("%.2f MB", memMB));
         this.actualOutputPath = actualOutput;
     }
 
-    // --- Getters phục vụ logic "Xem chi tiết" ---
+    /**
+     * Cập nhật trạng thái tạm thời (Ví dụ: "Running...").
+     */
+    public void updateStatus(String statusText) {
+        this.status.set(statusText);
+    }
+
+    /**
+     * Reset về trạng thái chờ (Khi bấm nút Run lại).
+     */
+    public void reset() {
+        this.status.set("Waiting...");
+        this.runtime.set("-");
+        this.actualOutputPath = null;
+    }
+
+    // --- Getters cho Logic ---
+
+    public TestCase getTestCase() {
+        return originalTestCase;
+    }
+
     public Path getExpectedOutputPath() {
-        return originalTestCase.getExpectedOutputPath();
+        // Record accessor
+        return originalTestCase.expectedOutputPath();
     }
 
     public Path getActualOutputPath() {
         return actualOutputPath;
     }
 
+    // --- Getters cho JavaFX TableView (Property Pattern) ---
 
-
-    // --- Property Getters phục vụ JavaFX TableView ---
     public StringProperty nameProperty() { return name; }
     public StringProperty statusProperty() { return status; }
     public StringProperty runtimeProperty() { return runtime; }
-
-    public void reset() {
-        this.status.set("Waiting");
-        this.runtime.set("-");
-        this.actualOutputPath = null;
-    }
-    public void updateStatus(String s) {
-        this.status.set(s);
-    }
-    public TestCase getTestCase() {
-        return this.originalTestCase;
-    }
+    public StringProperty memoryProperty() { return memory; }
 }

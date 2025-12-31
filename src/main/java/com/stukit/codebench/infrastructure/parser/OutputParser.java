@@ -1,14 +1,15 @@
 package com.stukit.codebench.infrastructure.parser;
 
 /**
- * Chuẩn hoá output cho chương trình và expected output
- * trước khi so sánh.
+ * Interface chuẩn hoá output để so sánh.
+ * Áp dụng mô hình Strategy Pattern.
  */
+@FunctionalInterface
 public interface OutputParser {
     /**
-     *
-     * @param raw output gốc từ chương trình
-     * @return output đã được chuẩn hoá
+     * Chuẩn hoá chuỗi đầu vào.
+     * @param raw chuỗi gốc (có thể null)
+     * @return chuỗi đã chuẩn hoá (không bao giờ null)
      */
     String normalize(String raw);
 }

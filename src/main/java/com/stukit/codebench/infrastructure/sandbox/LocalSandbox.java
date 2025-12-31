@@ -67,8 +67,8 @@ public class LocalSandbox implements Sandbox {
             // Tính toán dung lượng RAM (MB)
             long memoryInMb = memoryLimitBytes / 1024 / 1024;
 
-            // Đảm bảo tối thiểu 16MB để JVM khởi động được
-            if (memoryInMb < 16) memoryInMb = 16;
+            // Đảm bảo tối thiểu 64MB để JVM khởi động ổn định trên hầu hết cấu hình
+            if (memoryInMb < 64) memoryInMb = 64;
 
             // Tạo danh sách lệnh mới để chèn flag -Xmx
             // Cũ: [java, -cp, ..., Solution]

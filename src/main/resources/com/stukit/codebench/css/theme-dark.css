@@ -1,0 +1,182 @@
+/* dark-theme.css */
+
+/* --- CẤU HÌNH GIAO DIỆN CHUNG JAVAFX (Magic) --- */
+/* Dòng này sẽ tự động đổi màu tất cả các control (Button, Table, Label...) sang màu tối */
+.root {
+    -fx-base: #2b2b2b;      /* Màu nền cơ bản */
+    -fx-background: #2b2b2b;
+    -fx-control-inner-background: #2b2b2b; /* Nền của Text input, List, Table */
+    -fx-control-inner-background-alt: #3c3f41; /* Nền xen kẽ của Table row */
+    -fx-text-background-color: #a9b7c6; /* Màu chữ mặc định */
+    -fx-font-family: 'JetBrains Mono', 'Segoe UI', sans-serif;
+}
+
+/* Căn chỉnh chung cho cột trạng thái */
+.table-cell {
+    -fx-alignment: CENTER-LEFT;
+    -fx-font-size: 13px;
+    -fx-text-fill: #a9b7c6; /* Màu chữ sáng cho các ô thường */
+}
+
+/* --- TRẠNG THÁI TEST (STATUS) --- */
+/* Màu sắc cần sáng hơn (Neon/Pastel) để đọc được trên nền đen */
+
+/* AC - Accepted: Xanh lá sáng */
+.status-ac {
+    -fx-text-fill: #66bb6a;
+    -fx-font-weight: bold;
+}
+
+/* WA - Wrong Answer: Đỏ cam sáng */
+.status-wa {
+    -fx-text-fill: #ff6b6b;
+    -fx-font-weight: bold;
+}
+
+/* TLE - Time Limit Exceeded: Vàng cam sáng */
+.status-tle {
+    -fx-text-fill: #ffa726;
+    -fx-font-weight: bold;
+}
+
+/* Running: Xanh dương sáng */
+.status-running {
+    -fx-text-fill: #42a5f5;
+    -fx-font-style: italic;
+}
+
+/* CE - Compile Error: Vàng chanh (bổ sung nếu cần) */
+.status-ce {
+    -fx-text-fill: #ffee58;
+    -fx-font-weight: bold;
+}
+
+/* --- CODE EDITOR (DARCULA STYLE) --- */
+
+/* dark-theme.css */
+
+/* ================================================================= */
+/* 1. MÀU MẶC ĐỊNH CHO KÝ TỰ THƯỜNG (Đặt lên đầu)                   */
+/* ================================================================= */
+
+.styled-text-area {
+    -fx-font-family: 'JetBrains Mono', 'Consolas', 'Menlo', 'Courier New', monospace;
+    -fx-font-size: 14px;
+}
+/* Đây là màu cho các ký tự không phải keyword, không phải string... */
+.styled-text-area .text {
+
+    -fx-fill: #a9b7c6; /* Màu xám trắng (Default Text của Dark Mode) */
+}
+
+/* ================================================================= */
+/* 2. SYNTAX HIGHLIGHTING (Phải đặt SAU quy tắc trên)               */
+/* Lưu ý: Thêm .styled-text-area phía trước để tăng độ ưu tiên      */
+/* ================================================================= */
+
+/* Từ khóa (public, void, class...) -> Cam đất */
+.styled-text-area .keyword {
+    -fx-fill: #cc7832;
+    -fx-font-weight: bold;
+}
+
+/* Chuỗi (String) -> Xanh lá */
+.styled-text-area .string {
+    -fx-fill: #6a8759;
+}
+
+/* Comment -> Xám nghiêng */
+.styled-text-area .comment {
+    -fx-fill: #808080;
+    -fx-font-style: italic;
+}
+
+/* Các ký tự đặc biệt (; {} () []) -> Trắng xám */
+.styled-text-area .semicolon,
+.styled-text-area .paren,
+.styled-text-area .brace,
+.styled-text-area .bracket {
+    -fx-fill: #a9b7c6;
+}
+
+/* ================================================================= */
+/* 3. CÁC THÀNH PHẦN KHÁC CỦA EDITOR                                */
+/* ================================================================= */
+
+/* Nền editor */
+.styled-text-area {
+    -fx-background-color: #2b2b2b;
+    -fx-text-fill: #a9b7c6; /* Fallback */
+}
+
+/* Dòng đang trỏ chuột */
+.paragraph-box:has-caret {
+    -fx-background-color: #323232;
+}
+
+/* Vùng bôi đen (Selection) */
+.styled-text-area .selection {
+    -fx-fill: #214283;
+}
+
+/* Số dòng */
+.lineno {
+    -fx-fill: #606366;
+    -fx-background-color: #313335;
+    -fx-padding: 0 5 0 5;
+}
+
+/* ================================================================= */
+/* 4. TRẠNG THÁI (Status Label trong bảng)                          */
+/* ================================================================= */
+
+.status-ac { -fx-text-fill: #66bb6a; -fx-font-weight: bold; }
+.status-wa { -fx-text-fill: #ff6b6b; -fx-font-weight: bold; }
+.status-tle { -fx-text-fill: #ffa726; -fx-font-weight: bold; }
+.status-running { -fx-text-fill: #42a5f5; -fx-font-style: italic; }
+.status-ce { -fx-text-fill: #ffee58; -fx-font-weight: bold; }
+
+/* Cấu hình chung cho giao diện tối */
+.root {
+    -fx-base: #2b2b2b;
+    -fx-control-inner-background: #2b2b2b;
+    -fx-control-inner-background-alt: #3c3f41;
+    -fx-text-background-color: #a9b7c6;
+}
+
+/* Toolbar trên cùng (Dark Mode) */
+.top-bar {
+    -fx-background-color: #3c3f41; /* Màu toolbar chuẩn IntelliJ */
+    -fx-padding: 10;
+    -fx-border-color: #323232; /* Viền tối hơn chút */
+    -fx-border-width: 0 0 1 0;
+}
+
+/* Thanh trạng thái dưới cùng (Dark Mode) */
+.bottom-bar {
+    -fx-background-color: #313335; /* Màu status bar chuẩn IntelliJ */
+    -fx-padding: 5;
+    -fx-border-color: #323232;
+    -fx-border-width: 1 0 0 0; /* Viền trên */
+}
+
+
+.top-bar .button {
+    -fx-background-color: #4c5052;
+    -fx-text-fill: #bbbbbb;
+    -fx-border-color: #5e6060;
+    -fx-border-radius: 3;
+    -fx-background-radius: 3;
+}
+
+.top-bar .button:hover {
+    -fx-background-color: #5c6164;
+    -fx-text-fill: white;
+}
+
+/* Riêng nút RUN vẫn giữ màu xanh nhưng tối hơn chút cho đỡ chói */
+.top-bar #btnRun {
+    -fx-background-color: #365880; /* Xanh đậm */
+    -fx-text-fill: white;
+    -fx-border-color: transparent;
+}

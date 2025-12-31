@@ -1,101 +1,111 @@
 package com.stukit.codebench.infrastructure.runner;
 
+import com.stukit.codebench.domain.RunResult;
 import com.stukit.codebench.infrastructure.sandbox.Sandbox;
+import com.stukit.codebench.service.FileIOService;
 
-import java.io.*;
-import java.nio.charset.StandardCharsets;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.nio.file.Path;
-import java.util.concurrent.*;
+import java.util.concurrent.TimeUnit;
 
 public class JavaRunner {
 
-    public RunResult run(File workspaceRoot, String input, Sandbox sandbox) throws RunnerException {
+    private final FileIOService fileIOService;
 
-        // Tìm đường dẫn java (đảm bảo đa nền tảng)
-        String javaPath = Path.of(System.getProperty("java.home"), "bin", "java").toString();
+    public JavaRunner() {
+        this.fileIOService = new FileIOService();
+    }
 
-        // Thêm tham số -Xmx để giới hạn bộ nhớ (lấy từ sandbox)
-        // Ví dụ: processBuilder.command(javaPath, "-Xmx256m", "-cp", ".", "Solution");
-        ProcessBuilder processBuilder = new ProcessBuilder(javaPath, "-Dfile.encoding=UTF-8", "-cp", ".", "Solution");
+    // --- HÀM HELPER ĐỂ GHI LOG RA DESKTOP ---
+    private void logToDesktop(String message) {
+        try {
+            String desktopPath = System.getProperty("user.home") + "/Desktop/debug_runner.txt";
+            try (PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(desktopPath, true)))) {
+                out.println(message);
+            }
+        } catch (IOException ignored) { }
+    }
+
+    public RunResult run(File workspaceRoot, Path inputPath, Sandbox sandbox) throws RunnerException {
+        logToDesktop("========== BẮT ĐẦU CHẠY JAVARUNNER ==========");
+
+        // 1. Debug đường dẫn Java
+        String javaPath = Path.of(System.getProperty("java.home"), "bin", "java.exe").toString();
+        logToDesktop("Java Path: " + javaPath);
+
+        // 2. Cấu hình ProcessBuilder
+        var processBuilder = new ProcessBuilder(
+                javaPath,
+                "-Dfile.encoding=UTF-8",
+                "-cp", ".",
+                "Solution"
+        );
+
         processBuilder.directory(workspaceRoot);
-        processBuilder.redirectErrorStream(false); // Tách riêng stdout và stderr
+        logToDesktop("Working Dir: " + workspaceRoot.getAbsolutePath());
 
-        // Tạo ThreadPool (phải shutdown ở finally)
-        ExecutorService executor = Executors.newFixedThreadPool(2);
+        // Kiểm tra file Solution.class có tồn tại không
+        File classFile = new File(workspaceRoot, "Solution.class");
+        logToDesktop("Solution.class exists? " + classFile.exists());
+
+        File stdoutFile = new File(workspaceRoot, inputPath.getFileName().toString() + "_out.txt");
+        File stderrFile = new File(workspaceRoot, inputPath.getFileName().toString() + "_err.txt");
+
+        processBuilder.redirectOutput(stdoutFile);
+        processBuilder.redirectError(stderrFile);
+        processBuilder.redirectInput(inputPath.toFile());
 
         Process process = null;
+
         try {
             long startTime = System.currentTimeMillis();
+            logToDesktop("Đang gọi process.start()...");
+
             process = processBuilder.start();
 
-            // --- QUAN TRỌNG: Ghi Input vào Process (Có xử lý lỗi Pipe ended) ---
-            // Nếu process chết ngay lập tức, việc ghi input sẽ ném IOException.
-            // Ta phải catch nó để không làm crash Judge, mà để code chạy tiếp xuống dưới đọc stderr.
-            final Process finalProcess = process;
-            try (BufferedWriter writer = new BufferedWriter(
-                    new OutputStreamWriter(finalProcess.getOutputStream(), StandardCharsets.UTF_8))) {
-                if (input != null && !input.isEmpty()) {
-                    writer.write(input);
-                    writer.flush();
-                }
-            } catch (IOException e) {
-                // "The pipe has been ended" thường xảy ra ở đây.
-                // Nghĩa là chương trình con đã đóng hoặc crash trước khi nhận hết input.
-                // LỜ ĐI lỗi này để xuống dưới đọc nguyên nhân lỗi từ getErrorStream().
-            }
-
-            // Đọc Output bất đồng bộ để tránh Deadlock
-            // Lưu ý: Dù process đã chết, Stream vẫn còn đọng lại dữ liệu trong buffer của OS, nên vẫn đọc được.
-            Future<String> stdoutFuture = executor.submit(() -> readStream(finalProcess.getInputStream()));
-            Future<String> stderrFuture = executor.submit(() -> readStream(finalProcess.getErrorStream()));
-
-            // Chờ kết quả hoặc Timeout
+            logToDesktop("Đang chờ process chạy (TimeLimit: " + sandbox.timeLimits() + "ms)...");
             boolean isFinished = process.waitFor(sandbox.timeLimits(), TimeUnit.MILLISECONDS);
+            long endTime = System.currentTimeMillis();
 
+            // 6. Xử lý Timeout
             if (!isFinished) {
+                logToDesktop("!!! KẾT QUẢ: TIMEOUT !!!"); // <--- LOG QUAN TRỌNG
                 process.destroyForcibly();
                 return RunResult.timeout(sandbox.timeLimits());
             }
 
-            long endTime = System.currentTimeMillis();
+            // 7. Lấy kết quả Exit Code
             int exitCode = process.exitValue();
-
-            // Lấy kết quả từ Future
-            String stdout = stdoutFuture.get();
-            String stderr = stderrFuture.get();
-
-            // Xác định Runtime Error dựa trên Exit Code
-            boolean isRuntimeError = (exitCode != 0);
+            logToDesktop("!!! KẾT QUẢ: DONE. Exit Code = " + exitCode); // <--- LOG QUAN TRỌNG
 
             return new RunResult(
-                    isRuntimeError,     // True nếu exitCode != 0
+                    false,
                     exitCode,
                     endTime - startTime,
-                    stdout,
-                    stderr              // Nếu crash, stderr sẽ chứa stacktrace
+                    stdoutFile.toPath(),
+                    stderrFile.toPath()
             );
 
-        } catch (InterruptedException | ExecutionException e) {
-            throw new RunnerException("Lỗi hệ thống khi chạy code: " + e.getMessage(), e);
+        } catch (InterruptedException e) {
+            logToDesktop("ERROR: Interrupted - " + e.getMessage());
+            Thread.currentThread().interrupt();
+            throw new RunnerException("Interrupted", e);
         } catch (IOException e) {
-            throw new RunnerException("Lỗi IO khi khởi tạo process: " + e.getMessage(), e);
+            logToDesktop("ERROR: IOException - " + e.getMessage());
+            e.printStackTrace(); // Vẫn in ra console cho chắc
+            throw new RunnerException("IO Error", e);
+        } catch (Exception e) {
+            logToDesktop("ERROR: Exception lạ - " + e.getMessage());
+            throw new RunnerException("Error", e);
         } finally {
-            // Dọn dẹp
-            executor.shutdownNow();
             if (process != null && process.isAlive()) {
                 process.destroyForcibly();
             }
+            logToDesktop("========== KẾT THÚC JAVARUNNER ==========\n");
         }
-    }
-
-    private String readStream(InputStream inputStream) throws IOException {
-        StringBuilder stringBuilder = new StringBuilder();
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                stringBuilder.append(line).append("\n");
-            }
-        }
-        return stringBuilder.toString().trim();
     }
 }

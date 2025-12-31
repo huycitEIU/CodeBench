@@ -16,17 +16,6 @@ public class TestCaseDetailController {
 
     // Hàm này sẽ được MainController gọi để truyền dữ liệu vào
     public void setTestCaseData(TestCase testCase, JudgeResult judgeResult) {
-        if (testCase == null) return;
-
-        lblTitle.setText("Chi tiết: " + testCase.getName());
-
-        txtInput.setText(testCase.getInput());
-        txtExpected.setText(testCase.getExpectedOutput());
-        if (judgeResult.getOutput() == null) {
-            txtActual.setText("(Chưa chạy code)");
-        } else {
-            txtActual.setText(judgeResult.getOutput());
-        }
-        // txtError.setText(testCase.getErrorOutput()); // Nếu sau này có lưu lỗi
+        return;
     }
 }

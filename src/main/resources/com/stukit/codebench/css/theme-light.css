@@ -1,8 +1,44 @@
+/* styles.css */
+
+.root {
+    -fx-font-family: 'JetBrains Mono', 'Segoe UI', sans-serif;
+}
+
+/* Căn chỉnh chung cho cột trạng thái */
+.table-cell {
+    -fx-alignment: CENTER-LEFT; /* Hoặc CENTER tùy bạn */
+    -fx-font-size: 13px;
+}
+
+/* AC - Accepted: Màu xanh lá đậm, in đậm */
+.status-ac {
+    -fx-text-fill: #2e7d32; /* Xanh lá */
+    -fx-font-weight: bold;
+}
+
+/* WA - Wrong Answer: Màu đỏ đậm, in đậm */
+.status-wa {
+    -fx-text-fill: #c62828; /* Đỏ */
+    -fx-font-weight: bold;
+}
+
+/* TLE - Time Limit Exceeded: Màu cam/vàng đậm */
+.status-tle {
+    -fx-text-fill: #ef6c00; /* Cam đậm */
+    -fx-font-weight: bold;
+}
+
+/* Running: Màu xanh dương hoặc xám, in nghiêng để thể hiện đang xử lý */
+.status-running {
+    -fx-text-fill: #1565c0; /* Xanh dương */
+    -fx-font-style: italic;
+}
+
 /* 1. Cấu hình khung soạn thảo (Nền trắng, chữ đen) */
 .styled-text-area {
     -fx-background-color: #FFFFFF;
     -fx-text-fill: #000000;
-    -fx-font-family: 'Consolas', 'Menlo', 'Courier New', monospace; /* Hỗ trợ đa nền tảng tốt hơn */
+    -fx-font-family: 'JetBrains Mono', 'Consolas', 'Menlo', 'Courier New', monospace; /* Hỗ trợ đa nền tảng tốt hơn */
     -fx-font-size: 14px;
 }
 
@@ -60,4 +96,17 @@
     -fx-fill: #999999;
     -fx-background-color: #FFFFFF;
     -fx-padding: 0 5 0 5; /* Canh lề cho số dòng thoáng hơn */
+}
+
+.top-bar {
+    -fx-background-color: #f4f4f4;
+    -fx-padding: 10;
+    -fx-border-color: #dcdcdc;
+    -fx-border-width: 0 0 1 0; /* Viền dưới nhẹ */
+}
+
+/* Thanh trạng thái dưới cùng (Light Mode) */
+.bottom-bar {
+    -fx-background-color: #dddddd;
+    -fx-padding: 5;
 }

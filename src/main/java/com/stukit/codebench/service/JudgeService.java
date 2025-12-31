@@ -5,11 +5,12 @@ import com.stukit.codebench.domain.TestCase;
 import com.stukit.codebench.domain.Verdict;
 import com.stukit.codebench.infrastructure.compiler.CompileException;
 import com.stukit.codebench.infrastructure.compiler.JavaCompilerService;
+import com.stukit.codebench.infrastructure.fs.TempWorkspace;
 import com.stukit.codebench.infrastructure.fs.Workspace;
 import com.stukit.codebench.infrastructure.fs.WorkspaceFactory;
 import com.stukit.codebench.infrastructure.parser.OutputParser;
 import com.stukit.codebench.infrastructure.runner.JavaRunner;
-import com.stukit.codebench.infrastructure.runner.RunResult;
+import com.stukit.codebench.domain.RunResult;
 import com.stukit.codebench.infrastructure.runner.RunnerException;
 import com.stukit.codebench.infrastructure.sandbox.LocalSandbox;
 import com.stukit.codebench.infrastructure.sandbox.Sandbox;
@@ -22,8 +23,8 @@ public class JudgeService {
     private final JavaCompilerService compilerService;
     private final JavaRunner runner;
     private final OutputParser parser;
+    private final FileIOService fileIOService;
 
-    // Constructor: Chỉ nhận dependencies, không nhận source code
     public JudgeService(
             WorkspaceFactory workspaceFactory,
             JavaCompilerService compilerService,
@@ -34,20 +35,16 @@ public class JudgeService {
         this.compilerService = compilerService;
         this.runner = javaRunner;
         this.parser = parser;
+        this.fileIOService = new FileIOService();
     }
 
-    /**
-     * Bắt đầu một phiên chấm bài mới.
-     * Tạo Workspace và trả về đối tượng JudgeSession để điều khiển việc chấm từng bài.
-     */
     public JudgeSession createSession(String sourceCode, long timeLimitMs) throws IOException {
         Workspace workspace = workspaceFactory.create();
         return new JudgeSession(workspace, sourceCode, timeLimitMs);
     }
 
     // =================================================================================
-    // INNER CLASS: JudgeSession
-    // Giữ trạng thái của Workspace để chấm nhiều test case liên tiếp
+    // INNER CLASS
     // =================================================================================
     public class JudgeSession implements Closeable {
         private final Workspace workspace;
@@ -61,40 +58,36 @@ public class JudgeService {
             this.timeLimitMs = timeLimitMs;
         }
 
-        /**
-         * Bước 1: Biên dịch code.
-         * Nên gọi hàm này trước khi chạy loop test case.
-         */
         public void compile() throws CompileException {
             compilerService.compile(workspace, sourceCode);
-            // Sau khi compile thành công, setup sandbox 1 lần
             this.sandbox = new LocalSandbox(workspace.getRoot(), timeLimitMs, 0);
         }
 
-        /**
-         * Bước 2: Chạy một test case cụ thể.
-         * Hàm này sẽ được gọi trong vòng lặp của Controller.
-         */
         public JudgeResult runTestCase(TestCase testCase) {
-            // Nếu chưa khởi tạo sandbox (do chưa compile hoặc quên gọi compile), trả về lỗi hệ thống
             if (this.sandbox == null) {
-                return new JudgeResult(testCase.getName(), Verdict.SYSTEM_ERROR, 0, "", "JudgeSession chưa được biên dịch.");
+                return new JudgeResult(
+                        testCase.getName(),
+                        Verdict.SYSTEM_ERROR,
+                        "Session not compiled");
             }
 
             try {
+                // 1. Chạy code (JavaRunner tự ghi ra file stdout.txt trong workspace)
                 RunResult runResult = runner.run(
                         workspace.getRoot().toFile(),
-                        testCase.getInput(),
+                        testCase.getInputPath(), // Đọc input từ file của TestCase
                         sandbox
                 );
 
+
+                // 2. Kiểm tra các lỗi Runtime / Timeout trước
                 if (runResult.isTimeout()) {
                     return new JudgeResult(
                             testCase.getName(),
                             Verdict.TIME_LIMIT_EXCEEDED,
-                            sandbox.timeLimits(),
-                            "",
-                            "Time limit exceeded"
+                            runResult.getRunTime(),
+                            runResult.getStdoutPath(), // Path stdout
+                            runResult.getStderrPath() // Path stderr
                     );
                 }
 
@@ -103,33 +96,55 @@ public class JudgeService {
                             testCase.getName(),
                             Verdict.RUNTIME_ERROR,
                             runResult.getRunTime(),
-                            runResult.getStderr(),
-                            runResult.getStderr()
+                            runResult.getStdoutPath(), // Path stdout
+                            runResult.getStderrPath()  // Path stderr
                     );
                 }
 
-                String actual = parser.normalize(runResult.getStdout());
-                String expected = parser.normalize(testCase.getExpectedOutput());
+                // 3. Logic so sánh Output (Parser)
+                // Đọc nội dung file output thực tế để chấm (fileIOService đọc file an toàn)
+                // Lưu ý: Nếu output quá lớn, parser.normalize có thể tốn RAM.
+                // Tốt nhất là đọc file, normalize rồi so sánh, hoặc dùng stream comparison.
+                String actualContent = fileIOService.readString(runResult.getStdoutPath());
+                String expectedContent = fileIOService.readString(testCase.getExpectedOutputPath());
 
-                if (actual.equals(expected)) {
-                    return new JudgeResult(testCase.getName(), Verdict.PASSED, runResult.getRunTime(), actual, "");
-                } else {
-                    return new JudgeResult(testCase.getName(), Verdict.FAILED, runResult.getRunTime(), actual, "");
-                }
+                String normalizedActual = parser.normalize(actualContent);
+                String normalizedExpected = parser.normalize(expectedContent);
+
+                Verdict verdict = normalizedActual.equals(normalizedExpected) ? Verdict.PASSED : Verdict.FAILED;
+
+                // 4. Trả về kết quả kèm đường dẫn file để UI load sau (Lazy Loading)
+                return new JudgeResult(
+                        testCase.getName(),
+                        verdict,
+                        runResult.getRunTime(),
+                        runResult.getStdoutPath(), // Path stdout
+                        runResult.getStderrPath()  // Path stderr
+                );
 
             } catch (RunnerException e) {
-                System.err.println(e.getMessage());
-                return new JudgeResult(testCase.getName(), Verdict.SYSTEM_ERROR, 0, "", e.getMessage());
+                return new JudgeResult(
+                        testCase.getName(),
+                        Verdict.RUNTIME_ERROR,
+                        e.getMessage());
+            } catch (IOException e) {
+                return new JudgeResult(
+                        testCase.getName(),
+                        Verdict.SYSTEM_ERROR,
+                        "IO Error: " + e.getMessage());
             }
         }
 
-        /**
-         * Bước 3: Dọn dẹp Workspace.
-         * Được gọi tự động nếu dùng try-with-resources.
-         */
+        public void cleanupWorkspace() {
+            if (workspace instanceof TempWorkspace) {
+                ((TempWorkspace) workspace).cleanup();
+            }
+        }
+
         @Override
         public void close() throws IOException {
             if (workspace != null) {
+                // Chỉ đóng các kết nối (nếu có), KHÔNG XÓA file
                 workspace.close();
             }
         }

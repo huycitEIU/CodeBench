@@ -1,0 +1,62 @@
+@startuml Run_Code_Flow
+
+actor User
+participant "MainController" as CTRL
+participant "JudgeService" as JS
+participant "JudgeSession" as SESSION
+participant "TempWorkspace" as WS
+participant "JavaCompiler" as COMP
+participant "JavaRunner" as RUN
+participant "FileIOService" as IO
+
+User -> CTRL : Click "Run"
+activate CTRL
+
+CTRL -> JS : createSession(sourceCode, timeLimit)
+activate JS
+JS -> WS : create() (New folder)
+JS --> CTRL : return new Session
+deactivate JS
+
+CTRL -> SESSION : compile()
+activate SESSION
+SESSION -> COMP : javac Solution.java
+COMP --> SESSION : Success/Fail
+deactivate SESSION
+
+alt Compile Success
+    loop For each TestCase
+        CTRL -> CTRL : updateRow("Running...")
+        CTRL -> SESSION : runTestCase(testCase)
+        activate SESSION
+
+        note right of SESSION: Bước 1: Runner chạy & ghi file
+        SESSION -> RUN : run(workspace, inputPath, sandbox)
+        activate RUN
+        RUN -> RUN : ProcessBuilder.redirectOutput(stdout.txt)
+        RUN -> RUN : Process.start() & waitFor()
+        RUN -> IO : readPreview(stdout.txt) (Chỉ lấy header)
+        IO --> RUN : preview string
+        RUN --> SESSION : RunResult (exitCode, previewString)
+        deactivate RUN
+
+        note right of SESSION: Bước 2: Chấm điểm (Compare files)
+        SESSION -> IO : readString(stdout.txt) (Full content)
+        SESSION -> IO : readString(expected.txt)
+        SESSION -> SESSION : Parser.compare(actual, expected)
+
+        SESSION --> CTRL : JudgeResult (PASSED, Path actualOutput)
+        deactivate SESSION
+
+        CTRL -> CTRL : row.updateResult(PASSED, time, actualPath)
+    end
+end
+
+CTRL -> SESSION : close()
+activate SESSION
+SESSION -> WS : close()
+WS -> WS : Files.walk & delete
+deactivate SESSION
+
+deactivate CTRL
+@enduml

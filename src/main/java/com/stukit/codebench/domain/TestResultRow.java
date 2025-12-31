@@ -1,37 +1,63 @@
 package com.stukit.codebench.domain;
 
-import javafx.beans.property.SimpleStringProperty;
-import javafx.beans.property.StringProperty;
+import com.stukit.codebench.domain.TestCase;
+import javafx.beans.property.*;
+
+import java.nio.file.Path;
 
 public class TestResultRow {
-    // Dữ liệu gốc
-    private final TestCase testCase;
+    // 1. Tham chiếu ngược lại TestCase gốc (Để lấy Input/Expected khi cần)
+    private final TestCase originalTestCase;
 
-    // Dữ liệu hiển thị lên UI (dùng Property để UI tự update)
-    private final StringProperty testName;
-    private final StringProperty status; // Waiting, Running, AC, WA, TLE...
-    private final StringProperty time;   // 15ms, 1.2s...
-    private final StringProperty message; // Chi tiết lỗi nếu có
+    // 2. Các thông tin kết quả chạy (Dynamic)
+    private final SimpleStringProperty name; // Tên lấy từ TestCase
+    private final SimpleStringProperty status; // AC, WA, TLE, Running
+    private final SimpleStringProperty runtime;
+
+    // 3. Đường dẫn Output thực tế (Mới sinh ra sau khi chạy)
+    private Path actualOutputPath;
 
     public TestResultRow(TestCase testCase) {
-        this.testCase = testCase;
-        this.testName = new SimpleStringProperty(testCase.getName()); 
-        this.status = new SimpleStringProperty("Waiting"); // Mặc định 
-        this.time = new SimpleStringProperty("");
-        this.message = new SimpleStringProperty("");
+        this.originalTestCase = testCase;
+
+        // Khởi tạo mặc định cho UI
+        this.name = new SimpleStringProperty(testCase.getName());
+        this.status = new SimpleStringProperty("Waiting...");
+        this.runtime = new SimpleStringProperty("-");
     }
 
-    // Getters for Property (bắt buộc để TableView hiểu)
-    public StringProperty testNameProperty() { return testName; }
+    // --- Setter cập nhật kết quả sau khi chạy xong ---
+    public void updateResult(String status, long timeMs, Path actualOutput) {
+        this.status.set(status);
+        this.runtime.set(timeMs + " ms");
+        this.actualOutputPath = actualOutput;
+    }
+
+    // --- Getters phục vụ logic "Xem chi tiết" ---
+    public Path getExpectedOutputPath() {
+        return originalTestCase.getExpectedOutputPath();
+    }
+
+    public Path getActualOutputPath() {
+        return actualOutputPath;
+    }
+
+
+
+    // --- Property Getters phục vụ JavaFX TableView ---
+    public StringProperty nameProperty() { return name; }
     public StringProperty statusProperty() { return status; }
-    public StringProperty timeProperty() { return time; }
-    public StringProperty messageProperty() { return message; }
+    public StringProperty runtimeProperty() { return runtime; }
 
-    // Getter thường
-    public TestCase getTestCase() { return testCase; }
-
-    // Setter tiện ích
-    public void setStatus(String s) { this.status.set(s); }
-    public void setTime(String t) { this.time.set(t); }
-    public void setMessage(String m) { this.message.set(m); }
+    public void reset() {
+        this.status.set("Waiting");
+        this.runtime.set("-");
+        this.actualOutputPath = null;
+    }
+    public void updateStatus(String s) {
+        this.status.set(s);
+    }
+    public TestCase getTestCase() {
+        return this.originalTestCase;
+    }
 }

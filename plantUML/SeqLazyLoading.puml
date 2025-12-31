@@ -1,0 +1,38 @@
+@startuml Lazy_Loading_Detail
+
+actor User
+participant "MainController" as CTRL
+participant "TestResultRow" as ROW
+participant "TestCase" as TC
+participant "FileIOService" as IO
+participant "DetailDialog" as UI
+
+User -> CTRL : Right Click Row -> "Xem chi tiết"
+activate CTRL
+
+CTRL -> ROW : getActualOutputPath()
+ROW --> CTRL : Path("/workspace/run_1/stdout.txt")
+
+CTRL -> ROW : getExpectedOutputPath()
+ROW -> TC : getExpectedOutputPath()
+TC --> ROW : Path("/data/test1/expect.txt")
+ROW --> CTRL : Path("/data/test1/expect.txt")
+
+note right of CTRL
+  Ở đây MainController mới bắt đầu đọc file.
+  Nếu file 1GB, FileIOService chỉ đọc 20KB đầu.
+end note
+
+CTRL -> IO : readPreview(actualPath)
+IO --> CTRL : String "Output content..."
+
+CTRL -> IO : readPreview(expectedPath)
+IO --> CTRL : String "Expected content..."
+
+CTRL -> UI : show(actualContent, expectedContent)
+activate UI
+UI --> User : Display Dialog
+deactivate UI
+
+deactivate CTRL
+@enduml

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<DialogPane xmlns="http://javafx.com/javafx"
+            xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.stukit.codebench.ui.controller.ManualTestController"
+            prefWidth="500" prefHeight="400">
+
+    <headerText>
+        Nhập dữ liệu Input và Output mong muốn cho Testcase mới.
+    </headerText>
+
+    <content>
+        <GridPane hgap="10" vgap="10">
+            <columnConstraints>
+                <ColumnConstraints minWidth="80" halignment="RIGHT"/>
+                <ColumnConstraints hgrow="ALWAYS"/>
+            </columnConstraints>
+
+            <Label text="Tên Test:"
+                   GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+
+            <TextField fx:id="txtName" promptText="Ví dụ: Test biên, Test rỗng..."
+                       GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+
+            <Label text="Input:"
+                   GridPane.rowIndex="1" GridPane.columnIndex="0"
+                   GridPane.valignment="TOP"/>
+
+            <TextArea fx:id="txtInput" promptText="Dữ liệu đầu vào..." wrapText="true"
+                      GridPane.rowIndex="1" GridPane.columnIndex="1" VBox.vgrow="ALWAYS"/>
+
+            <Label text="Expected:"
+                   GridPane.rowIndex="2" GridPane.columnIndex="0"
+                   GridPane.valignment="TOP"/>
+
+            <TextArea fx:id="txtOutput" promptText="Kết quả mong muốn (để trống nếu không cần)..." wrapText="true"
+                      GridPane.rowIndex="2" GridPane.columnIndex="1" VBox.vgrow="ALWAYS"/>
+        </GridPane>
+    </content>
+</DialogPane>

@@ -1,25 +1,27 @@
 package com.stukit.codebench.domain;
 
+import java.nio.file.Path;
+
 public class TestCase {
     private final String name;
-    private final String input;
-    private final String expectedOutput;
+    private final Path inputPath;
+    private final Path expectedOutputPath;
 
-    public TestCase(String name, String input, String expectedOutput) {
+    public TestCase(String name, Path inputPath, Path expectedOutputPath) {
         this.name = name;
-        this.input = input;
-        this.expectedOutput = expectedOutput;
+        this.inputPath = inputPath;
+        this.expectedOutputPath = expectedOutputPath;
     }
 
     public String getName() {
         return name;
     }
 
-    public String getInput() {
-        return input;
+    public Path getInputPath() {
+        return inputPath;
     }
 
-    public String getExpectedOutput() {
-        return expectedOutput;
+    public Path getExpectedOutputPath() {
+        return expectedOutputPath;
     }
 }

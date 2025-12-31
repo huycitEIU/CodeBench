@@ -1,56 +1,94 @@
 package com.stukit.codebench.domain;
 
+import java.nio.file.Path;
+
 public class JudgeResult {
     private final String name;
     private final Verdict verdict;
     private final long runTimeMs;
-    private final String output;
-    private final String error;
-    private String status = "UN";
 
-    public JudgeResult(String name, Verdict verdict, long runTimeMs, String output, String error) {
+    // Thay đổi: Lưu Path thay vì String nội dung
+    private final Path actualOutputPath;
+    private final Path errorOutputPath;
+
+    // Dùng cho Compile Error hoặc System Error (những lỗi không sinh ra file output chuẩn)
+    private final String message;
+
+    private String status;
+
+    /**
+     * Constructor 1: Dùng cho trường hợp chạy Code xong (có Output file hoặc Error file)
+     * (AC, WA, TLE, RTE)
+     */
+    public JudgeResult(String name, Verdict verdict, long runTimeMs, Path actualOutputPath, Path errorOutputPath) {
         this.name = name;
         this.verdict = verdict;
         this.runTimeMs = runTimeMs;
-        this.output = output;
-        this.error = error;
-        if (verdict == Verdict.PASSED) this.status = "AC";
-        if (verdict == Verdict.FAILED) this.status = "WA";
-        if (verdict == Verdict.RUNTIME_ERROR) this.status = "RUNTIME";
-        if (verdict == Verdict.TIME_LIMIT_EXCEEDED) this.status = "TLE";
-        if (verdict == Verdict.COMPILE_ERROR) this.status = "CE";
-        if (verdict == Verdict.SYSTEM_ERROR) this.status = "SE";
+        this.actualOutputPath = actualOutputPath;
+        this.errorOutputPath = errorOutputPath;
+        this.message = null; // Không dùng message string
+        this.status = mapVerdictToStatus(verdict);
     }
 
-    public String getStatus() {
-        return status;
+    /**
+     * Constructor 2: Dùng cho trường hợp Lỗi biên dịch hoặc Lỗi hệ thống (Chỉ có message)
+     * (CE, SE)
+     */
+    public JudgeResult(String name, Verdict verdict, String message) {
+        this.name = name;
+        this.verdict = verdict;
+        this.runTimeMs = 0;
+        this.actualOutputPath = null;
+        this.errorOutputPath = null;
+        this.message = message;
+        this.status = mapVerdictToStatus(verdict);
     }
 
-    public void setStatus(String status) {
-        this.status = status;
+    // Helper để map Enum sang String (Java 17 Switch expression)
+    private String mapVerdictToStatus(Verdict verdict) {
+        if (verdict == null) return "UN";
+        return switch (verdict) {
+            case PASSED -> "AC";
+            case FAILED -> "WA";
+            case RUNTIME_ERROR -> "RTE"; // Sửa lại cho ngắn gọn
+            case TIME_LIMIT_EXCEEDED -> "TLE";
+            case COMPILE_ERROR -> "CE";
+            case SYSTEM_ERROR -> "SE";
+            default -> "UN";
+        };
     }
 
     public boolean isPassed() {
         return Verdict.PASSED == verdict;
     }
 
-    public String getError() {
-        return error;
-    }
+    // --- Getters ---
 
-    public String getOutput() {
-        return output;
-    }
-
-    public long getRunTimeMs() {
-        return runTimeMs;
+    public String getName() {
+        return name;
     }
 
     public Verdict getVerdict() {
         return verdict;
     }
 
-    public String getName() {
-        return name;
+    public long getRunTimeMs() {
+        return runTimeMs;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public Path getActualOutputPath() {
+        return actualOutputPath;
+    }
+
+    public Path getErrorOutputPath() {
+        return errorOutputPath;
+    }
+
+    public String getMessage() {
+        return message;
     }
 }

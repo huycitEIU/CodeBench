@@ -44,17 +44,14 @@ public class TestCaseImportService {
             String outputName = inputName.substring(0, inputName.lastIndexOf('.')) + ".out";
             File outputFile = new File(folder, outputName);
 
-            String inputContent = readFileContent(inputFile);
-            String expectedOutput;
 
             if (outputFile.exists()) {
-                expectedOutput = readFileContent(outputFile);
+                TestCase testCase = new TestCase(inputName, inputFile.toPath(), outputFile.toPath());
+                testCases.add(testCase);
             } else {
-                expectedOutput = "Không tìm thấy file .out tương ứng.";
+                System.err.println("Không tìm thấy file output tương ứng.");
             }
 
-            TestCase testCase = new TestCase(inputName, inputContent, expectedOutput);
-            testCases.add(testCase);
         }
         return testCases;
     }

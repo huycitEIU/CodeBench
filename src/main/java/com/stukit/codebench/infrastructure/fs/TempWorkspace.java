@@ -1,11 +1,14 @@
 package com.stukit.codebench.infrastructure.fs;
 
+import com.stukit.codebench.service.FileIOService;
+
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.Comparator;
+import java.util.stream.Stream;
 
 /**
  * Triển khai Workspace dựa trên thư mục tạm của hệ điều hành.
@@ -69,23 +72,25 @@ public class TempWorkspace implements Workspace{
         }
     }
 
+    public void cleanup() {
+        if (!Files.exists(root)) return;
+
+        // Files.walk trả về Stream, phải đóng Stream này để thả lock folder
+        try (Stream<Path> walk = Files.walk(root)) {
+            walk.sorted(Comparator.reverseOrder()) // Xóa con trước, cha sau
+                    .map(Path::toFile)
+                    .forEach(java.io.File::delete);
+        } catch (IOException e) {
+            // Log lỗi nếu cần, nhưng thường thì cleanup thất bại không nên crash app
+            System.err.println("Warning: Failed to cleanup workspace " + root + ": " + e.getMessage());
+        }
+    }
+
     /**
      * Xoá toànbojoj nội dung workspace theo thứ tự ngược (file -> thư mục)
      */
     @Override
     public void close() {
-        try {
-            if (!Files.exists(root)) return;
-
-            Files.walk(root)
-                    .sorted(Comparator.reverseOrder())
-                    .forEach(path -> {
-                        try {
-                            Files.deleteIfExists(path);
-                        } catch (IOException ingored) {}
-                    });
-        } catch (IOException e) {
-            throw new FsException("Không thể cleanup workspace", e);
-        }
     }
+
 }

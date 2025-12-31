@@ -1,0 +1,103 @@
+@startuml CodeBench_Architecture_V2
+
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+
+package "Domain (Model)" {
+    class TestCase {
+        - name: String
+        - inputPath: Path
+        - expectedOutputPath: Path
+        - timeLimit: long
+    }
+
+    class JudgeResult {
+        - status: Verdict
+        - runTimeMs: long
+        - actualOutputPath: Path
+        - message: String
+    }
+
+    enum Verdict {
+        PASSED
+        FAILED
+        TLE
+        RTE
+        CE
+    }
+}
+
+package "UI Layer" {
+    class MainController {
+        - testCases: List<TestCase>
+        - tblResultData: ObservableList<TestResultRow>
+        + onRunClicked()
+        + onOpenTestDetail()
+    }
+
+    class TestResultRow {
+        - originalTestCase: TestCase
+        - actualOutputPath: Path
+        - status: SimpleStringProperty
+        + updateResult(status, time, path)
+        + getExpectedOutputPath(): Path
+        + getActualOutputPath(): Path
+    }
+}
+
+package "Service Layer" {
+    class JudgeService {
+        + createSession(): JudgeSession
+    }
+
+    class JudgeSession {
+        - workspace: Workspace
+        - sandbox: Sandbox
+        + compile()
+        + runTestCase(TestCase): JudgeResult
+        + close()
+    }
+
+    class FileIOService {
+        + readString(Path): String
+        + writeString(Path, String)
+        + readPreview(Path, limit): String
+        + deletePath(Path)
+    }
+}
+
+package "Infrastructure" {
+    class JavaRunner {
+        + run(File, input, Sandbox): RunResult
+    }
+
+    class TempWorkspace {
+        - root: Path
+        + write()
+        + resolve()
+        + close()
+        note: Fix stream leak here
+    }
+
+    class DefaultOutputParser {
+        + normalize(String): String
+    }
+}
+
+' Relationships
+MainController --> JudgeService
+MainController --> FileIOService : "Read preview for UI"
+MainController o-- TestResultRow : "Manages"
+TestResultRow *-- TestCase : "Wraps"
+
+JudgeService ..> JudgeSession : "Creates"
+JudgeSession --> JavaRunner : "Uses"
+JudgeSession --> TempWorkspace : "Manages Lifecycle"
+JudgeSession --> DefaultOutputParser : "Uses"
+JudgeSession --> FileIOService : "Read for compare"
+JudgeSession ..> JudgeResult : "Produces"
+
+JavaRunner ..> FileIOService : "Read stdout/stderr"
+JudgeResult *-- Verdict
+
+@enduml

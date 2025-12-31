@@ -1,30 +1,26 @@
 package com.stukit.codebench.ui.controller;
 
-import com.stukit.codebench.domain.JudgeResult;
 import com.stukit.codebench.domain.TestCase;
 import com.stukit.codebench.domain.TestResultRow;
-import com.stukit.codebench.infrastructure.compiler.CompileException;
 import com.stukit.codebench.infrastructure.compiler.JavaCompilerService;
 import com.stukit.codebench.infrastructure.fs.WorkspaceFactory;
 import com.stukit.codebench.infrastructure.parser.DefaultOutputParser;
-import com.stukit.codebench.infrastructure.parser.OutputParser;
 import com.stukit.codebench.infrastructure.runner.JavaRunner;
+import com.stukit.codebench.service.BatchJudgeTask;
 import com.stukit.codebench.service.FileIOService;
 import com.stukit.codebench.service.JudgeService;
 import com.stukit.codebench.service.TestCaseImportService;
 import com.stukit.codebench.ui.component.JavaCodeEditor;
-
+import com.stukit.codebench.ui.component.StatusCell;
+import com.stukit.codebench.ui.helper.ViewHelper;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.GridPane;
-import javafx.scene.layout.Priority;
 import javafx.scene.layout.StackPane;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
@@ -35,133 +31,84 @@ import java.io.IOException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Comparator;
 import java.util.List;
-import java.util.stream.Stream;
 
 public class MainController {
 
     /* ===================== FXML ===================== */
-    @FXML private Button btnImportTest;
-    @FXML private Button btnImportCode;
-    @FXML private Button btnAddTest;
-    @FXML private Button btnRun;
-    @FXML private Button btnToggleTheme;
+    @FXML private Button btnImportTest, btnImportCode, btnAddTest, btnRun, btnToggleTheme;
     @FXML private BorderPane mainContainer;
-
-    @FXML private TextField txtTimeLimit;
-    @FXML private Label lblScore;
-    @FXML private Label lblStatus;
-    @FXML private Label lblVersion;
+    @FXML private TextField txtTimeLimit, txtMemoryLimit; // Thêm field Memory Limit
+    @FXML private Label lblScore, lblStatus, lblVersion;
     @FXML private ProgressBar progressBar;
-
     @FXML private StackPane editorContainer;
-
     @FXML private TableView<TestResultRow> tblResults;
-    @FXML private TableColumn<TestResultRow, String> colStatus;
-    @FXML private TableColumn<TestResultRow, String> colName;
-    @FXML private TableColumn<TestResultRow, String> colRuntime;
+    @FXML private TableColumn<TestResultRow, String> colStatus, colName, colRuntime, colMemory;
 
-    /* ===================== STATE ===================== */
+    /* ===================== SERVICES & STATE ===================== */
     private final ObservableList<TestResultRow> tblResultData = FXCollections.observableArrayList();
-
-    private WorkspaceFactory workspaceFactory;
-    private JavaCompilerService compilerService;
-    private JavaRunner runner;
-    private OutputParser parser;
-
+    private JudgeService judgeService;
     private FileIOService fileService;
+    private JavaCodeEditor codeEditor;
     private JudgeService.JudgeSession currentSession;
 
-    private JavaCodeEditor codeEditor;
     private boolean isDarkMode = false;
-
-    String currentPath = System.getProperty("user.dir");
-    private final Path WORKSPACE_ROOT = Path.of(currentPath, "temp-workspaces");
-
     private static final String CSS_LIGHT = "/com/stukit/codebench/css/theme-light.css";
     private static final String CSS_DARK  = "/com/stukit/codebench/css/theme-dark.css";
     private static final String VIEW_MANUAL_TEST = "/com/stukit/codebench/fxml/manual-test-view.fxml";
+    private final Path WORKSPACE_ROOT = com.stukit.codebench.App.APP_TEMP_ROOT;
 
-    /* ===================== INIT ===================== */
     @FXML
     public void initialize() {
         lblVersion.setText("v2.0.0");
-
-        fileService = new FileIOService();
-        workspaceFactory = new WorkspaceFactory(WORKSPACE_ROOT);
-        compilerService = new JavaCompilerService();
-        runner = new JavaRunner();
-        parser = new DefaultOutputParser();
-
-        setupEditor();
-        setupTable();
-        setupDefaultState();
-        setupActions();
+        initServices();
+        initEditor();
+        initTable();
+        initActions();
+        resetStatus();
     }
 
-    private void setupEditor() {
+    private void initServices() {
+        WorkspaceFactory wsFactory = new WorkspaceFactory(WORKSPACE_ROOT);
+
+        // Khởi tạo JudgeService với các component con
+        this.judgeService = new JudgeService(
+                wsFactory,
+                new JavaCompilerService(),
+                new JavaRunner(),
+                new DefaultOutputParser()
+        );
+        this.fileService = new FileIOService();
+    }
+
+    private void initEditor() {
         codeEditor = new JavaCodeEditor();
+        // Load CSS mặc định cho Editor
+        URL css = getClass().getResource(CSS_LIGHT);
+        if (css != null) codeEditor.getStylesheets().add(css.toExternalForm());
 
-        // Load CSS an toàn (tránh lỗi NullPointer nếu file chưa build kịp)
-        URL cssResource = getClass().getResource(CSS_LIGHT);
-        if (cssResource != null) {
-            codeEditor.getStylesheets().add(cssResource.toExternalForm());
-        } else {
-            System.err.println("Warning: Không tìm thấy CSS tại " + CSS_LIGHT);
-        }
-
-        VirtualizedScrollPane<JavaCodeEditor> vsPane = new VirtualizedScrollPane<>(codeEditor);
-        editorContainer.getChildren().clear();
-        editorContainer.getChildren().add(vsPane);
+        editorContainer.getChildren().add(new VirtualizedScrollPane<>(codeEditor));
     }
 
-    private void setupTable() {
+    private void initTable() {
         tblResults.setItems(tblResultData);
+        colName.setCellValueFactory(cell -> cell.getValue().nameProperty());
+        colRuntime.setCellValueFactory(cell -> cell.getValue().runtimeProperty());
+        colStatus.setCellValueFactory(cell -> cell.getValue().statusProperty());
+        colMemory.setCellValueFactory(cell -> cell.getValue().memoryProperty());
 
-        colName.setCellValueFactory(cellData -> cellData.getValue().nameProperty());
-        colRuntime.setCellValueFactory(cellData -> cellData.getValue().runtimeProperty());
+        // Sử dụng Custom Cell Factory đã tách ra
+        colStatus.setCellFactory(column -> new StatusCell());
 
-        colStatus.setCellValueFactory(cellData -> cellData.getValue().statusProperty());
-        colStatus.setCellFactory(column -> new TableCell<TestResultRow, String>() {
-            @Override
-            protected void updateItem(String item, boolean empty) {
-                super.updateItem(item, empty);
-                setText(empty ? null : item);
-                getStyleClass().removeAll("status-ac", "status-wa", "status-tle", "status-running", "status-ce");
-
-                if (item != null && !empty) {
-                    switch (item) {
-                        case "AC" -> getStyleClass().add("status-ac");
-                        case "WA" -> getStyleClass().add("status-wa");
-                        case "TLE" -> getStyleClass().add("status-tle");
-                        case "CE" -> getStyleClass().add("status-ce");
-                        case "Running..." -> getStyleClass().add("status-running");
-                    }
-                }
-            }
-        });
-
-        // Context Menu để xem chi tiết
+        // Context Menu
         ContextMenu contextMenu = new ContextMenu();
         MenuItem viewItem = new MenuItem("Xem chi tiết Input/Output");
-        viewItem.setOnAction(actionEvent -> {
-            TestResultRow selectedRow = tblResults.getSelectionModel().getSelectedItem();
-            if (selectedRow != null) {
-                onOpenTestDetail(selectedRow);
-            }
-        });
+        viewItem.setOnAction(e -> onOpenTestDetail(tblResults.getSelectionModel().getSelectedItem()));
         contextMenu.getItems().add(viewItem);
         tblResults.setContextMenu(contextMenu);
     }
 
-    private void setupDefaultState() {
-        lblStatus.setText("Sẵn sàng.");
-        lblScore.setText("0 / 0");
-        progressBar.setProgress(0);
-    }
-
-    private void setupActions() {
+    private void initActions() {
         btnRun.setOnAction(e -> onRunClicked());
         btnImportTest.setOnAction(e -> onImportTest());
         btnImportCode.setOnAction(e -> onImportCode());
@@ -169,291 +116,150 @@ public class MainController {
         btnToggleTheme.setOnAction(e -> onToggleTheme());
     }
 
-    /* ===================== ACTIONS ===================== */
+    /* ===================== LOGIC XỬ LÝ ===================== */
 
     private void onRunClicked() {
-        // Dọn dẹp session cũ
-        if (currentSession != null) {
-            currentSession.cleanupWorkspace();
-            currentSession = null;
-        }
-
+        // Validation
         String sourceCode = codeEditor.getText();
-        if (sourceCode == null || sourceCode.trim().isEmpty()) {
-            lblStatus.setText("Lỗi: Chưa nhập source code");
+        if (sourceCode == null || sourceCode.isBlank()) {
+            lblStatus.setText("Lỗi: Chưa nhập source code.");
             return;
         }
-
         if (tblResultData.isEmpty()) {
-            lblStatus.setText("Chưa có testcase nào!");
+            lblStatus.setText("Chưa có test case nào.");
             return;
         }
 
-        long timeLimit;
-        try {
-            timeLimit = Long.parseLong(txtTimeLimit.getText().trim());
-        } catch (NumberFormatException e) {
-            lblStatus.setText("Time limit không hợp lệ");
-            return;
-        }
+        long timeLimit = parseLongSafe(txtTimeLimit.getText(), 1000);
+        long memoryLimit = parseLongSafe(txtMemoryLimit.getText(), 128 * 1024 * 1024); // Mặc định 128MB nếu không có UI field, hoặc lấy từ txtMemoryLimit
 
-        lblStatus.setText("Đang khởi tạo môi trường chấm...");
-        JudgeService judgeService = new JudgeService(workspaceFactory, compilerService, runner, parser);
+        // Dọn dẹp session cũ
+        if (currentSession != null) currentSession.close();
 
-        Task<Void> task = new Task<>() {
-            @Override
-            protected Void call() throws Exception {
-                currentSession = judgeService.createSession(sourceCode, timeLimit);
+        // Tạo Session mới
+        currentSession = judgeService.createSession(sourceCode, timeLimit, memoryLimit);
 
-                Platform.runLater(() -> {
-                    for (TestResultRow row : tblResultData) {
-                        row.reset();
-                    }
-                    lblStatus.setText("Đang biên dịch code...");
-                });
+        // Tạo và chạy Task (Sử dụng class BatchJudgeTask đã tách)
+        BatchJudgeTask task = new BatchJudgeTask(
+                currentSession,
+                tblResultData,
+                status -> Platform.runLater(() -> lblStatus.setText(status)), // Callback update status
+                this::updateScoreUI // Callback update score
+        );
 
-                try {
-                    // 1. Compile
-                    try {
-                        currentSession.compile();
-                    } catch (CompileException e) {
-                        Platform.runLater(() -> {
-                            for (TestResultRow row : tblResultData) {
-                                row.updateResult("CE", 0, null);
-                            }
-                            lblStatus.setText("Lỗi biên dịch: " + e.getMessage());
-                        });
-                        return null;
-                    }
-
-                    // 2. Run Testcases
-                    int total = tblResultData.size();
-                    int current = 0;
-
-                    for (TestResultRow row : tblResultData) {
-                        current++;
-                        final int index = current;
-
-                        Platform.runLater(() -> {
-                            row.updateStatus("Running...");
-                            lblStatus.setText(String.format("Đang chấm testcase %d/%d: %s", index, total, row.nameProperty().get()));
-                        });
-
-                        TestCase testCase = row.getTestCase();
-                        JudgeResult result = currentSession.runTestCase(testCase);
-
-                        Platform.runLater(() -> {
-                            row.updateResult(
-                                    result.getStatus().toString(),
-                                    result.getRunTimeMs(),
-                                    result.getActualOutputPath()
-                            );
-                            updateScoreUI();
-                        });
-                    }
-
-                    Platform.runLater(() -> lblStatus.setText("Đã chấm xong toàn bộ testcase."));
-
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    Platform.runLater(() -> lblStatus.setText("Lỗi hệ thống: " + e.getMessage()));
-                }
-                return null;
-            }
-        };
         new Thread(task).start();
     }
 
-    public void shutdown() {
-        if (currentSession != null) {
-            currentSession.cleanupWorkspace();
-        }
-        // Dọn dẹp folder manual
-        Path manualRoot = Path.of("./temp-workspaces/manual");
-        if (Files.exists(manualRoot)) {
-            try (Stream<Path> walk = Files.walk(manualRoot)) {
-                walk.sorted(Comparator.reverseOrder())
-                        .map(Path::toFile)
-                        .forEach(File::delete);
-            } catch (IOException e) {
-                System.err.println("Warning: Failed to clean manual tests: " + e.getMessage());
-            }
-        }
-    }
-
     private void onImportTest() {
-        TestCaseImportService importService = new TestCaseImportService();
-        DirectoryChooser directoryChooser = new DirectoryChooser();
-        directoryChooser.setTitle("Chọn thư mục chứa Testcase");
-
-        File selectedDirectory = directoryChooser.showDialog(tblResults.getScene().getWindow());
-
-        if (selectedDirectory != null) {
-            List<TestCase> loaded = importService.loadTestCasesFromFolder(selectedDirectory);
+        DirectoryChooser dc = new DirectoryChooser();
+        dc.setTitle("Chọn thư mục testcase");
+        File dir = dc.showDialog(mainContainer.getScene().getWindow());
+        if (dir != null) {
+            List<TestCase> cases = new TestCaseImportService().loadTestCasesFromFolder(dir);
             tblResultData.clear();
-            for (TestCase tc : loaded) {
-                tblResultData.add(new TestResultRow(tc));
-            }
-            lblStatus.setText("Đã nạp: " + loaded.size() + " testcase từ thư mục " + selectedDirectory.getName());
+            cases.forEach(tc -> tblResultData.add(new TestResultRow(tc)));
             updateScoreUI();
+            lblStatus.setText("Đã nạp " + cases.size() + " testcases.");
         }
     }
 
     private void onImportCode() {
-        FileChooser fileChooser = new FileChooser();
-        fileChooser.setTitle("Chọn file Java");
-        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Java Files", "*.java"));
-        File selectedFile = fileChooser.showOpenDialog(btnImportCode.getScene().getWindow());
-
-        if (selectedFile != null) {
+        FileChooser fc = new FileChooser();
+        fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("Java Files", "*.java"));
+        File file = fc.showOpenDialog(mainContainer.getScene().getWindow());
+        if (file != null) {
             try {
-                String content = Files.readString(selectedFile.toPath());
-                codeEditor.replaceText(content);
-                lblStatus.setText("Đã nạp source code: " + selectedFile.getName());
+                codeEditor.replaceText(Files.readString(file.toPath()));
+                lblStatus.setText("Đã nạp file: " + file.getName());
             } catch (IOException e) {
-                lblStatus.setText("Lỗi: " + e.getMessage());
+                ViewHelper.showError("Lỗi đọc file", e.getMessage());
             }
         }
     }
 
     private void onAddTestManually() {
         try {
-            URL fxmlUrl = getClass().getResource(VIEW_MANUAL_TEST);
-            if (fxmlUrl == null) {
-                lblStatus.setText("Lỗi: Không tìm thấy file " + VIEW_MANUAL_TEST);
-                return;
-            }
+            FXMLLoader loader = new FXMLLoader(getClass().getResource(VIEW_MANUAL_TEST));
+            DialogPane pane = loader.load();
 
-            FXMLLoader loader = new FXMLLoader(fxmlUrl);
-            DialogPane dialogPane = loader.load();
-
-            ManualTestController controller = loader.getController();
-            controller.setFileService(this.fileService);
-            controller.setDefaultName(tblResultData.size() + 1);
+            ManualTestController ctrl = loader.getController();
+            ctrl.setFileService(fileService);
+            ctrl.setDefaultName(tblResultData.size() + 1);
 
             Dialog<TestCase> dialog = new Dialog<>();
-            dialog.setTitle("Thêm Testcase Thủ Công");
-            dialog.setDialogPane(dialogPane);
+            dialog.setDialogPane(pane);
+            dialog.setTitle("Thêm Test Thủ Công");
+            dialog.initOwner(mainContainer.getScene().getWindow());
 
-            if (tblResults.getScene() != null) {
-                dialog.initOwner(tblResults.getScene().getWindow());
-            }
+            ButtonType btnAdd = new ButtonType("Thêm", ButtonBar.ButtonData.OK_DONE);
+            pane.getButtonTypes().addAll(btnAdd, ButtonType.CANCEL);
 
-            ButtonType btnTypeAdd = new ButtonType("Thêm", ButtonBar.ButtonData.OK_DONE);
-            dialog.getDialogPane().getButtonTypes().addAll(btnTypeAdd, ButtonType.CANCEL);
+            dialog.setResultConverter(bt -> bt == btnAdd ? ctrl.createTestCase() : null);
 
-            dialog.setResultConverter(dialogButton -> {
-                if (dialogButton == btnTypeAdd) {
-                    return controller.createTestCase();
-                }
-                return null;
-            });
-
-            dialog.showAndWait().ifPresent(testCase -> {
-                TestResultRow newRow = new TestResultRow(testCase);
-                tblResultData.add(newRow);
+            dialog.showAndWait().ifPresent(tc -> {
+                tblResultData.add(new TestResultRow(tc));
                 updateScoreUI();
-                lblStatus.setText("Đã thêm test thủ công: " + testCase.getName());
             });
-
         } catch (IOException e) {
-            e.printStackTrace();
-            lblStatus.setText("Lỗi mở dialog: " + e.getMessage());
-        }
-    }
-
-    private void onToggleTheme() {
-        isDarkMode = !isDarkMode;
-        Scene scene = btnToggleTheme.getScene();
-        if (scene == null) return;
-
-        URL lightUrl = getClass().getResource(CSS_LIGHT);
-        URL darkUrl = getClass().getResource(CSS_DARK);
-
-        // Nếu không tìm thấy file CSS thì thoát luôn, tránh lỗi
-        if (lightUrl == null || darkUrl == null) {
-            System.err.println("Lỗi: Không tìm thấy file CSS (Light/Dark)");
-            return;
-        }
-
-        String themeDarkPath = darkUrl.toExternalForm();
-        String themeLightPath = lightUrl.toExternalForm();
-
-        if (isDarkMode) {
-            scene.getStylesheets().remove(themeLightPath);
-            if (!scene.getStylesheets().contains(themeDarkPath)) scene.getStylesheets().add(themeDarkPath);
-
-            codeEditor.getStylesheets().remove(themeLightPath);
-            if (!codeEditor.getStylesheets().contains(themeDarkPath)) codeEditor.getStylesheets().add(themeDarkPath);
-
-            btnToggleTheme.setText("☀ Light Mode");
-            btnToggleTheme.setStyle("-fx-background-color: #f1c40f; -fx-text-fill: black;");
-        } else {
-            scene.getStylesheets().remove(themeDarkPath);
-            if (!scene.getStylesheets().contains(themeLightPath)) scene.getStylesheets().add(themeLightPath);
-
-            codeEditor.getStylesheets().remove(themeDarkPath);
-            if (!codeEditor.getStylesheets().contains(themeLightPath)) codeEditor.getStylesheets().add(themeLightPath);
-
-            btnToggleTheme.setText("🌙 Dark Mode");
-            btnToggleTheme.setStyle("-fx-background-color: #555; -fx-text-fill: white;");
+            ViewHelper.showError("Lỗi UI", "Không thể mở form thêm test: " + e.getMessage());
         }
     }
 
     private void onOpenTestDetail(TestResultRow row) {
         if (row == null) return;
+        // Lazy loading file content
+        String expected = fileService.readPreview(row.getExpectedOutputPath());
+        String actual = fileService.readPreview(row.getActualOutputPath());
 
-        // Lazy loading nội dung file
-        String expectedContent = fileService.readPreview(row.getExpectedOutputPath());
-        String actualContent = fileService.readPreview(row.getActualOutputPath());
-
-        showDetailDialog(row.nameProperty().get(), expectedContent, actualContent);
+        String css = isDarkMode ? getClass().getResource(CSS_DARK).toExternalForm() : null;
+        ViewHelper.showDiffDialog(mainContainer.getScene().getWindow(), row.nameProperty().get(), expected, actual, css);
     }
 
-    private void showDetailDialog(String title, String expected, String actual) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("Chi tiết: " + title);
-        alert.setHeaderText("So sánh kết quả");
-        alert.getDialogPane().setMinWidth(800);
-        alert.getDialogPane().setMinHeight(500);
+    private void onToggleTheme() {
+        isDarkMode = !isDarkMode;
+        String cssRemove = isDarkMode ? CSS_LIGHT : CSS_DARK;
+        String cssAdd = isDarkMode ? CSS_DARK : CSS_LIGHT;
 
-        TextArea txtExpected = new TextArea(expected);
-        txtExpected.setEditable(false);
-        txtExpected.setStyle("-fx-font-family: 'Consolas', 'Monospaced';");
+        updateStyleSheet(mainContainer.getScene(), cssRemove, cssAdd);
+        updateStyleSheet(codeEditor, cssRemove, cssAdd);
 
-        TextArea txtActual = new TextArea(actual);
-        txtActual.setEditable(false);
-        txtActual.setStyle("-fx-font-family: 'Consolas', 'Monospaced';");
+        btnToggleTheme.setText(isDarkMode ? "☀" : "🌙");
+    }
 
-        GridPane grid = new GridPane();
-        grid.setHgap(10);
-        grid.setVgap(10);
+    // Helper xử lý CSS cho cả Scene và CodeArea
+    private void updateStyleSheet(Object target, String removePath, String addPath) {
+        ObservableList<String> sheets;
+        if (target instanceof Scene s) sheets = s.getStylesheets();
+        else if (target instanceof JavaCodeEditor e) sheets = e.getStylesheets();
+        else return;
 
-        grid.add(new Label("Expected:"), 0, 0);
-        grid.add(txtExpected, 0, 1);
-        GridPane.setHgrow(txtExpected, Priority.ALWAYS);
-        GridPane.setVgrow(txtExpected, Priority.ALWAYS);
+        URL urlRemove = getClass().getResource(removePath);
+        URL urlAdd = getClass().getResource(addPath);
 
-        grid.add(new Label("Actual:"), 1, 0);
-        grid.add(txtActual, 1, 1);
-        GridPane.setHgrow(txtActual, Priority.ALWAYS);
-        GridPane.setVgrow(txtActual, Priority.ALWAYS);
-
-        alert.getDialogPane().setContent(grid);
-
-        // Thêm CSS cho Dialog để đồng bộ theme
-        if (tblResults.getScene() != null) {
-            alert.getDialogPane().getStylesheets().addAll(tblResults.getScene().getStylesheets());
+        if (urlRemove != null) sheets.remove(urlRemove.toExternalForm());
+        if (urlAdd != null && !sheets.contains(urlAdd.toExternalForm())) {
+            sheets.add(urlAdd.toExternalForm());
         }
-
-        alert.showAndWait();
     }
 
     private void updateScoreUI() {
-        long passed = tblResultData.stream()
-                .filter(r -> "AC".equals(r.statusProperty().get()))
-                .count();
+        long passed = tblResultData.stream().filter(r -> "AC".equals(r.statusProperty().get())).count();
         lblScore.setText(passed + " / " + tblResultData.size());
         progressBar.setProgress(tblResultData.isEmpty() ? 0 : (double) passed / tblResultData.size());
+    }
+
+    private void resetStatus() {
+        lblStatus.setText("Sẵn sàng.");
+        lblScore.setText("0 / 0");
+        progressBar.setProgress(0);
+    }
+
+    public void shutdown() {
+        if (currentSession != null) currentSession.close();
+        fileService.deletePath(Path.of("temp-workspaces/manual"));
+    }
+
+    private long parseLongSafe(String text, long defaultVal) {
+        try { return Long.parseLong(text.trim()); } catch (Exception e) { return defaultVal; }
     }
 }

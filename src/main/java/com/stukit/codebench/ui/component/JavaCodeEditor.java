@@ -11,8 +11,27 @@ import java.util.Collections;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+/**
+ * Component soạn thảo code Java có hỗ trợ Syntax Highlighting.
+ * Sử dụng thư viện RichTextFX.
+ */
 public class JavaCodeEditor extends CodeArea {
 
+    // --- Mẫu Code Mặc Định ---
+    private static final String DEFAULT_CODE = """
+            import java.util.Scanner;
+
+            public class Solution {
+                public static void main(String[] args) {
+                    // Viết code của bạn ở đây
+                    Scanner scanner = new Scanner(System.in);
+                    int n = scanner.nextInt();
+                    System.out.println("Input: " + n);
+                }
+            }
+            """;
+
+    // --- Định nghĩa Keywords ---
     private static final String[] KEYWORDS = new String[] {
             "abstract", "assert", "boolean", "break", "byte", "case", "catch", "char", "class", "const",
             "continue", "default", "do", "double", "else", "enum", "extends", "final", "finally", "float",
@@ -22,7 +41,7 @@ public class JavaCodeEditor extends CodeArea {
             "var"
     };
 
-    // Regex patterns
+    // --- Regex Groups ---
     private static final String KEYWORD_PATTERN = "\\b(" + String.join("|", KEYWORDS) + ")\\b";
     private static final String PAREN_PATTERN = "\\(|\\)";
     private static final String BRACE_PATTERN = "\\{|\\}";
@@ -31,6 +50,7 @@ public class JavaCodeEditor extends CodeArea {
     private static final String STRING_PATTERN = "\"([^\"\\\\]|\\\\.)*\"";
     private static final String COMMENT_PATTERN = "//[^\n]*" + "|" + "/\\*(.|\\R)*?\\*/";
 
+    // Tổng hợp Regex
     private static final Pattern PATTERN = Pattern.compile(
             "(?<KEYWORD>" + KEYWORD_PATTERN + ")"
                     + "|(?<PAREN>" + PAREN_PATTERN + ")"
@@ -42,59 +62,59 @@ public class JavaCodeEditor extends CodeArea {
     );
 
     public JavaCodeEditor() {
-        // 1. Thêm số dòng
+        // 1. Thêm số dòng bên trái
         this.setParagraphGraphicFactory(LineNumberFactory.get(this));
 
-        // 2. Logic highlight (Delay 200ms để mượt)
+        // 2. Logic highlight tự động (Debounce 200ms để tránh lag khi gõ nhanh)
         this.multiPlainChanges()
                 .successionEnds(Duration.ofMillis(200))
-                .subscribe(ignore -> {
-                    this.setStyleSpans(0, computeHighlighting(this.getText()));
-                });
+                .subscribe(ignore -> this.setStyleSpans(0, computeHighlighting(this.getText())));
 
-        // 3. Set code mặc định và kích hoạt highlight ngay lập tức
-        String initialCode = """
-import java.util.Scanner;
+        // 3. Set nội dung ban đầu
+        this.replaceText(0, 0, DEFAULT_CODE);
 
-public class Solution {
-    public static void main(String[] args) {
-        // Code here
-        int a = 10;
-        String s = "Hello World";
-        System.out.println(s);
-    }
-}
-""";
-        this.replaceText(0, 0, initialCode);
-        this.setStyleSpans(0, computeHighlighting(initialCode)); // Highlight thủ công lần đầu
+        // 4. Highlight thủ công ngay lần đầu (vì sự kiện change chưa trigger)
+        this.setStyleSpans(0, computeHighlighting(DEFAULT_CODE));
     }
 
+    /**
+     * Tính toán các span style dựa trên Regex.
+     * Hàm này chạy khá nặng nên cần được gọi bất đồng bộ hoặc debounce.
+     */
     private static StyleSpans<Collection<String>> computeHighlighting(String text) {
         Matcher matcher = PATTERN.matcher(text);
         int lastKwEnd = 0;
         StyleSpansBuilder<Collection<String>> spansBuilder = new StyleSpansBuilder<>();
 
         while (matcher.find()) {
-            String styleClass =
-                    matcher.group("KEYWORD") != null ? "keyword" :
-                            matcher.group("PAREN") != null ? "paren" :
-                                    matcher.group("BRACE") != null ? "brace" :
-                                            matcher.group("BRACKET") != null ? "bracket" :
-                                                    matcher.group("SEMICOLON") != null ? "semicolon" :
-                                                            matcher.group("STRING") != null ? "string" :
-                                                                    matcher.group("COMMENT") != null ? "comment" :
-                                                                            null; /* never happens */
-
+            String styleClass = determineStyleClass(matcher);
             assert styleClass != null;
 
-            // Khoảng trắng thường (không màu)
+            // Thêm phần text thường (không style) nằm giữa các match
             spansBuilder.add(Collections.emptyList(), matcher.start() - lastKwEnd);
-            // Từ khóa (có màu)
+
+            // Thêm phần text khớp Regex (có style)
             spansBuilder.add(Collections.singleton(styleClass), matcher.end() - matcher.start());
+
             lastKwEnd = matcher.end();
         }
-        // Phần còn lại
+
+        // Thêm phần text còn lại cuối cùng
         spansBuilder.add(Collections.emptyList(), text.length() - lastKwEnd);
         return spansBuilder.create();
+    }
+
+    /**
+     * Helper xác định tên CSS class dựa trên Group name của Regex.
+     */
+    private static String determineStyleClass(Matcher matcher) {
+        if (matcher.group("KEYWORD") != null)   return "keyword";
+        if (matcher.group("PAREN") != null)     return "paren";
+        if (matcher.group("BRACE") != null)     return "brace";
+        if (matcher.group("BRACKET") != null)   return "bracket";
+        if (matcher.group("SEMICOLON") != null) return "semicolon";
+        if (matcher.group("STRING") != null)    return "string";
+        if (matcher.group("COMMENT") != null)   return "comment";
+        return "default";
     }
 }

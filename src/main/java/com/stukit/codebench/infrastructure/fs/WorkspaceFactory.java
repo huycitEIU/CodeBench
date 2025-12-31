@@ -1,18 +1,11 @@
 package com.stukit.codebench.infrastructure.fs;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
 /**
- * Factory tạo Workspace theo cấu hình chung của ứng dụng.
- *
- * <p>Mục đích:
- * <ul>
- *     <li>Tránh tạo workspace rải rác khắp nơi</li>
- *     <li>Dễ thay đổi chiến lược lưu trữ (local / sandbox / docker)</li>
- * </ul>
+ * Factory để tạo ra các Workspace biệt lập.
  */
 public class WorkspaceFactory {
     private final Path baseDir;
@@ -22,16 +15,18 @@ public class WorkspaceFactory {
     }
 
     /**
-     * Tạo workspace mới vơi thư mục riêng biệt.
-     * @return Workspace sẵn sàng sử dụng
+     * Tạo một workspace tạm thời với tên ngẫu nhiên (codebench-xxx).
      */
     public Workspace create() {
         try {
-            Files.createDirectories(baseDir);
+            // Đảm bảo thư mục gốc tồn tại
+            if (!Files.exists(baseDir)) {
+                Files.createDirectories(baseDir);
+            }
             Path tempDir = Files.createTempDirectory(baseDir, "codebench-");
             return new TempWorkspace(tempDir);
         } catch (IOException e) {
-            throw new FsException("Không thể tạo workspace", e);
+            throw new FsException("Không thể tạo workspace tại: " + baseDir, e);
         }
     }
 }

@@ -1,15 +1,15 @@
 package com.stukit.codebench.infrastructure.fs;
 
+import java.io.Serial;
+
 /**
- * Exception cho các lỗi liên quan đến filesystem.
- *
- * <p>Đây là RuntimeException vì:
- * <ul>
- *     <li>Lỗi FS thường không recover được</li>
- *     <li>Không muốn làm bẩn domain layer bằng IOException</li>
- * </ul>
+ * Exception unchecked dùng cho các lỗi IO/Filesystem.
+ * Giúp code nghiệp vụ sạch hơn, không bị dính checked IOException.
  */
-public class FsException extends RuntimeException{
+public class FsException extends RuntimeException {
+    @Serial
+    private static final long serialVersionUID = 1L;
+
     public FsException(String message, Throwable cause) {
         super(message, cause);
     }

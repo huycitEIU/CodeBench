@@ -1,38 +1,42 @@
-@startuml Lazy_Loading_Detail
+@startuml Lazy_Loading_Detail_V2
 
 actor User
 participant "MainController" as CTRL
 participant "TestResultRow" as ROW
-participant "TestCase" as TC
+participant "TestCase (Record)" as TC
 participant "FileIOService" as IO
-participant "DetailDialog" as UI
+participant "ViewHelper" as VIEW
 
 User -> CTRL : Right Click Row -> "Xem chi tiết"
 activate CTRL
 
+' 1. Lấy đường dẫn file
 CTRL -> ROW : getActualOutputPath()
-ROW --> CTRL : Path("/workspace/run_1/stdout.txt")
+ROW --> CTRL : Path("/temp/run_1/test1_out.txt")
 
 CTRL -> ROW : getExpectedOutputPath()
-ROW -> TC : getExpectedOutputPath()
-TC --> ROW : Path("/data/test1/expect.txt")
-ROW --> CTRL : Path("/data/test1/expect.txt")
+ROW -> TC : expectedOutputPath()
+note right: Gọi kiểu Record (không có get...)
+TC --> ROW : Path("/data/test1.out")
+ROW --> CTRL : Path("/data/test1.out")
 
+' 2. Đọc nội dung (Lazy Loading)
 note right of CTRL
-  Ở đây MainController mới bắt đầu đọc file.
-  Nếu file 1GB, FileIOService chỉ đọc 20KB đầu.
+  Chỉ đọc 20KB đầu tiên để tránh tràn bộ nhớ
+  nếu file output quá lớn (vd: lặp vô hạn in ra 1GB)
 end note
 
 CTRL -> IO : readPreview(actualPath)
-IO --> CTRL : String "Output content..."
+IO --> CTRL : String "Actual content..."
 
 CTRL -> IO : readPreview(expectedPath)
 IO --> CTRL : String "Expected content..."
 
-CTRL -> UI : show(actualContent, expectedContent)
-activate UI
-UI --> User : Display Dialog
-deactivate UI
+' 3. Hiển thị Dialog qua Helper
+CTRL -> VIEW : showDiffDialog(title, expected, actual)
+activate VIEW
+VIEW --> User : Display Comparison Dialog
+deactivate VIEW
 
 deactivate CTRL
 @enduml

@@ -1,62 +1,101 @@
-@startuml Run_Code_Flow
+@startuml Run_Code_Flow_V3
 
 actor User
 participant "MainController" as CTRL
-participant "JudgeService" as JS
+participant "BatchJudgeTask" as TASK
 participant "JudgeSession" as SESSION
+participant "JavaCompilerService" as COMP
 participant "TempWorkspace" as WS
-participant "JavaCompiler" as COMP
 participant "JavaRunner" as RUN
+participant "ProcessMemoryMonitor" as MEM
 participant "FileIOService" as IO
 
 User -> CTRL : Click "Run"
 activate CTRL
 
-CTRL -> JS : createSession(sourceCode, timeLimit)
-activate JS
-JS -> WS : create() (New folder)
-JS --> CTRL : return new Session
-deactivate JS
-
-CTRL -> SESSION : compile()
+' 1. Tạo Session & Task
+CTRL -> SESSION : createSession(sourceCode, time, mem)
 activate SESSION
-SESSION -> COMP : javac Solution.java
-COMP --> SESSION : Success/Fail
+SESSION --> CTRL : return new Session
 deactivate SESSION
 
-alt Compile Success
-    loop For each TestCase
-        CTRL -> CTRL : updateRow("Running...")
-        CTRL -> SESSION : runTestCase(testCase)
-        activate SESSION
+CTRL -> TASK : new BatchJudgeTask(session, rows, uiCallback)
+activate TASK
+CTRL -> TASK : thread.start()
+deactivate CTRL
+' Controller trả về ngay để UI không bị đơ
 
-        note right of SESSION: Bước 1: Runner chạy & ghi file
-        SESSION -> RUN : run(workspace, inputPath, sandbox)
-        activate RUN
-        RUN -> RUN : ProcessBuilder.redirectOutput(stdout.txt)
-        RUN -> RUN : Process.start() & waitFor()
-        RUN -> IO : readPreview(stdout.txt) (Chỉ lấy header)
-        IO --> RUN : preview string
-        RUN --> SESSION : RunResult (exitCode, previewString)
-        deactivate RUN
+' 2. Bắt đầu chạy trong Background Thread
+activate TASK
+TASK -> TASK : Platform.runLater(Set status "Compiling")
 
-        note right of SESSION: Bước 2: Chấm điểm (Compare files)
-        SESSION -> IO : readString(stdout.txt) (Full content)
-        SESSION -> IO : readString(expected.txt)
-        SESSION -> SESSION : Parser.compare(actual, expected)
+TASK -> SESSION : compile()
+activate SESSION
+SESSION -> COMP : compile(workspace, code)
+activate COMP
 
-        SESSION --> CTRL : JudgeResult (PASSED, Path actualOutput)
-        deactivate SESSION
+' --- [FIX] BƯỚC QUAN TRỌNG: GHI FILE SOURCE TRƯỚC ---
+COMP -> WS : write("Solution.java", sourceCode)
+activate WS
+WS --> COMP : File created
+deactivate WS
+' ----------------------------------------------------
 
-        CTRL -> CTRL : row.updateResult(PASSED, time, actualPath)
-    end
+COMP -> COMP : Process("javac Solution.java")
+COMP --> SESSION : Success
+deactivate COMP
+deactivate SESSION
+
+' 3. Vòng lặp chấm bài
+loop For each TestCase
+    TASK -> TASK : Platform.runLater(Set status "Running...")
+
+    TASK -> SESSION : runTestCase(testCase)
+    activate SESSION
+
+    ' 3.1 Runner chạy Process
+    SESSION -> RUN : run(inputPath, sandbox)
+    activate RUN
+
+    ' Runner cấu hình redirect output vào file trong Workspace
+    RUN -> RUN : ProcessBuilder.redirectOutput(stdout.txt)
+    RUN -> RUN : ProcessBuilder.start()
+
+    ' 3.2 Khởi động Monitor đo RAM
+    create MEM
+    RUN -> MEM : new ProcessMemoryMonitor(process)
+    RUN -> MEM : start()
+    activate MEM
+
+    ' Process thực tế sẽ tự động ghi output vào file do OS quản lý
+    note right of RUN
+       Process đang chạy...
+       (OS tự động ghi stdout -> stdout.txt)
+    end note
+
+    RUN -> RUN : waitFor(timeLimit)
+
+    RUN -> MEM : stopMonitoring()
+    MEM --> RUN : peakMemoryBytes
+    deactivate MEM
+    destroy MEM
+
+    RUN --> SESSION : RunResult (exitCode, time, memory)
+    deactivate RUN
+
+    ' 3.3 So sánh kết quả
+    SESSION -> IO : readString(stdout.txt)
+    SESSION -> IO : readString(expected.txt)
+    SESSION -> SESSION : Parser.normalize() & compare
+
+    SESSION --> TASK : JudgeResult (PASSED/FAILED)
+    deactivate SESSION
+
+    ' 3.4 Cập nhật UI
+    TASK -> TASK : Platform.runLater(updateRow & updateScore)
 end
 
-CTRL -> SESSION : close()
-activate SESSION
-SESSION -> WS : close()
-WS -> WS : Files.walk & delete
-deactivate SESSION
+TASK -> TASK : Platform.runLater(Set status "Done")
+deactivate TASK
 
-deactivate CTRL
 @enduml

@@ -110,3 +110,101 @@
     -fx-background-color: #dddddd;
     -fx-padding: 5;
 }
+
+/* --- HELP WINDOW (LIGHT THEME) --- */
+
+.header-panel {
+    -fx-background-color: #f4f4f4;
+    -fx-border-color: #dcdcdc;
+    -fx-border-width: 0 0 1 0;
+}
+
+.header-title {
+    -fx-text-fill: #333333;
+}
+
+/* Sidebar bên trái */
+.sidebar {
+    -fx-background-color: #f0f0f0;
+}
+
+.sidebar-title {
+    -fx-text-fill: #666666;
+}
+
+.topic-list {
+    -fx-background-color: #f0f0f0;
+    -fx-control-inner-background: #f0f0f0;
+    -fx-background-insets: 0;
+}
+.topic-list .list-cell {
+    -fx-text-fill: #333333;
+}
+.topic-list .list-cell:filled:selected {
+    -fx-background-color: #daedff; /* Xanh nhạt kiểu IntelliJ */
+    -fx-text-fill: black;
+}
+
+/* Nội dung bên phải */
+.content-scroll-pane, .content-scroll-pane .viewport {
+    -fx-background-color: #ffffff;
+}
+
+.content-area {
+    -fx-background-color: #ffffff;
+}
+
+.content-title {
+    -fx-text-fill: #0033B3; /* Xanh đậm */
+}
+
+.content-body {
+    -fx-text-fill: #333333;
+}
+
+/* Footer và Nút đóng */
+.footer-panel {
+    -fx-background-color: #f4f4f4;
+    -fx-border-color: #dcdcdc;
+    -fx-border-width: 1 0 0 0;
+}
+
+.btn-close {
+    -fx-background-color: #e0e0e0;
+    -fx-text-fill: black;
+    -fx-border-color: #aaaaaa;
+    -fx-border-radius: 3;
+    -fx-background-radius: 3;
+}
+.btn-close:hover {
+    -fx-background-color: #d0d0d0;
+}
+
+/* --- CẤU HÌNH MENU ITEM --- */
+
+.context-menu {
+    /* Đặt chiều rộng tối thiểu cho toàn bộ bảng menu xổ xuống */
+    /*-fx-min-width: 200px;*/
+    /*-fx-background-color: #3c3f41; !* Đổi màu nền *!*/
+    /*-fx-background-radius: 5px;    !* Bo tròn góc cái hộp *!*/
+    -fx-border-color: #555555;     /* Viền màu xám */
+    /*-fx-border-radius: 5px;        !* Bo tròn viền *!*/
+    -fx-padding: 5px 0 5px 0;      /* Khoảng cách đệm trên/dưới */
+}
+
+.menu-item {
+    /* Tăng khoảng cách lề: Trên - Phải - Dưới - Trái */
+    /* Tăng số thứ 2 (Phải) và số thứ 4 (Trái) lên để rộng hơn */
+    -fx-padding: 8 20 8 20;
+}
+
+/* Tăng khoảng cách giữa "Tên lệnh" và "Phím tắt" */
+.menu-item .label {
+    -fx-padding: 0 30 0 0; /* Đẩy phím tắt ra xa một chút */
+}
+
+/* Trang trí riêng cho phần hiển thị phím tắt (nếu muốn đẹp hơn) */
+.menu-item .accelerator-text {
+    -fx-font-size: 11px;
+    -fx-text-fill: #777777; /* Màu xám nhạt cho đỡ rối mắt */
+}

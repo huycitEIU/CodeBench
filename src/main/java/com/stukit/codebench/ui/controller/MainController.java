@@ -20,10 +20,12 @@ import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.input.KeyCombination;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.StackPane;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
+import javafx.stage.Stage;
 import org.fxmisc.flowless.VirtualizedScrollPane;
 
 import java.io.File;
@@ -44,6 +46,8 @@ public class MainController {
     @FXML private StackPane editorContainer;
     @FXML private TableView<TestResultRow> tblResults;
     @FXML private TableColumn<TestResultRow, String> colStatus, colName, colRuntime, colMemory;
+    @FXML private MenuItem menuAbout, menuExit, menuDocs, menuImportTest, menuImportCode, menuTheme;
+    @FXML private MenuItem menuRun;
 
     /* ===================== SERVICES & STATE ===================== */
     private final ObservableList<TestResultRow> tblResultData = FXCollections.observableArrayList();
@@ -58,6 +62,8 @@ public class MainController {
     private static final String VIEW_MANUAL_TEST = "/com/stukit/codebench/fxml/manual-test-view.fxml";
     private final Path WORKSPACE_ROOT = com.stukit.codebench.App.APP_TEMP_ROOT;
 
+    private ViewHelper viewHelper = new ViewHelper();
+
     @FXML
     public void initialize() {
         lblVersion.setText("v2.0.0");
@@ -65,6 +71,7 @@ public class MainController {
         initEditor();
         initTable();
         initActions();
+        initShortcut();
         resetStatus();
     }
 
@@ -109,16 +116,29 @@ public class MainController {
     }
 
     private void initActions() {
-        btnRun.setOnAction(e -> onRunClicked());
+        btnRun.setOnAction(e -> onRunCode());
         btnImportTest.setOnAction(e -> onImportTest());
         btnImportCode.setOnAction(e -> onImportCode());
         btnAddTest.setOnAction(e -> onAddTestManually());
         btnToggleTheme.setOnAction(e -> onToggleTheme());
+        menuAbout.setOnAction(e -> onOpenAbout());
+        menuDocs.setOnAction(e -> onOpenDocs());
+        menuExit.setOnAction(e -> onCloseApp());
+        menuImportCode.setOnAction(e -> onImportCode());
+        menuImportTest.setOnAction(e -> onImportTest());
+        menuTheme.setOnAction(e -> onToggleTheme());
+        menuRun.setOnAction(e -> onRunCode());
+    }
+
+    private void initShortcut() {
+        setShortcut(menuImportCode, "Shortcut+O");
+        setShortcut(menuImportTest, "Shortcut+T");
+        setShortcut(menuRun, "F5");
     }
 
     /* ===================== LOGIC XỬ LÝ ===================== */
 
-    private void onRunClicked() {
+    private void onRunCode() {
         // Validation
         String sourceCode = codeEditor.getText();
         if (sourceCode == null || sourceCode.isBlank()) {
@@ -172,7 +192,7 @@ public class MainController {
                 codeEditor.replaceText(Files.readString(file.toPath()));
                 lblStatus.setText("Đã nạp file: " + file.getName());
             } catch (IOException e) {
-                ViewHelper.showError("Lỗi đọc file", e.getMessage());
+                viewHelper.showError("Lỗi đọc file", e.getMessage());
             }
         }
     }
@@ -201,7 +221,7 @@ public class MainController {
                 updateScoreUI();
             });
         } catch (IOException e) {
-            ViewHelper.showError("Lỗi UI", "Không thể mở form thêm test: " + e.getMessage());
+            viewHelper.showError("Lỗi UI", "Không thể mở form thêm test: " + e.getMessage());
         }
     }
 
@@ -212,7 +232,7 @@ public class MainController {
         String actual = fileService.readPreview(row.getActualOutputPath());
 
         String css = isDarkMode ? getClass().getResource(CSS_DARK).toExternalForm() : null;
-        ViewHelper.showDiffDialog(mainContainer.getScene().getWindow(), row.nameProperty().get(), expected, actual, css);
+        viewHelper.showDiffDialog(mainContainer.getScene().getWindow(), row.nameProperty().get(), expected, actual, css);
     }
 
     private void onToggleTheme() {
@@ -224,6 +244,18 @@ public class MainController {
         updateStyleSheet(codeEditor, cssRemove, cssAdd);
 
         btnToggleTheme.setText(isDarkMode ? "☀" : "🌙");
+    }
+
+    private void onOpenAbout() {
+        viewHelper.showAboutDialog(getCurrentCSS());
+    }
+
+    private void onOpenDocs() {
+        viewHelper.showDocument(getCurrentCSS());
+    }
+    private void onCloseApp() {
+        Stage stage = (Stage) mainContainer.getScene().getWindow();
+        stage.close();
     }
 
     // Helper xử lý CSS cho cả Scene và CodeArea
@@ -240,6 +272,11 @@ public class MainController {
         if (urlAdd != null && !sheets.contains(urlAdd.toExternalForm())) {
             sheets.add(urlAdd.toExternalForm());
         }
+    }
+
+    private String getCurrentCSS() {
+        return isDarkMode ? getClass().getResource(CSS_DARK).toExternalForm() :
+                getClass().getResource(CSS_LIGHT).toExternalForm();
     }
 
     private void updateScoreUI() {
@@ -261,5 +298,9 @@ public class MainController {
 
     private long parseLongSafe(String text, long defaultVal) {
         try { return Long.parseLong(text.trim()); } catch (Exception e) { return defaultVal; }
+    }
+
+    private void setShortcut(MenuItem menuItem, String shortcut) {
+        menuItem.setAccelerator(KeyCombination.keyCombination(shortcut));
     }
 }

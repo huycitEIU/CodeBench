@@ -1,13 +1,18 @@
 package com.stukit.codebench;
 
 import com.stukit.codebench.ui.controller.MainController;
+import com.stukit.codebench.ui.controller.SplashController;
 import javafx.application.Application;
 import javafx.application.Platform;
+import javafx.concurrent.Task;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.image.Image;
+import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
+import javafx.stage.StageStyle;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -30,11 +35,75 @@ public class App extends Application {
     // Đường dẫn Resource
     private static final String FXML_PATH = "/com/stukit/codebench/fxml/main.fxml";
     private static final String CSS_PATH = "/com/stukit/codebench/css/theme-light.css";
-    private static final String FONT_CODE_PATH = "/com/stukit/codebench/fonts/JetBrainsMono-Regular.ttf";
+    private static final String FONT_CODE_PATH = "/com/stukit/codebench/fonts/JetBrainsMono-Medium.ttf";
     private static final String FONT_UI_PATH = "/com/stukit/codebench/fonts/Inter-Regular.ttf";
 
     @Override
     public void start(Stage primaryStage) throws IOException {
+        showSplashScreen(primaryStage);
+    }
+
+    private void showSplashScreen(Stage primaryStage) throws IOException {
+        // Load giao diện Splash
+        FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/stukit/codebench/fxml/splash.fxml"));
+        Parent splashRoot = loader.load();
+
+        // Lấy controller để điều khiển thanh loading
+        SplashController controller = loader.getController();
+
+        // Tạo Stage cho Splash (Không viền - Undecorated)
+        Stage splashStage = new Stage();
+        Scene splashScene = new Scene(splashRoot);
+        splashScene.setFill(Color.TRANSPARENT); // Nền trong suốt nếu
+        splashStage.setScene(splashScene);
+        splashStage.initStyle(StageStyle.UNDECORATED); // Ẩn thanh tiêu đề window
+
+        try {
+            // Lưu ý đường dẫn bắt đầu bằng dấu / (tính từ thư mục resources)
+            Image icon = new Image(getClass().getResourceAsStream("/com/stukit/codebench/icons/logo64.png"));
+            splashStage.getIcons().add(icon);
+        } catch (Exception e) {
+            System.out.println("Lỗi không tìm thấy file icon: " + e.getMessage());
+        }
+        splashStage.show();
+
+        // Tạo Task giả lập việc tải dữ liệu nặng (Load Database, Check update...)
+        Task<Void> task = new Task<>() {
+            @Override
+            protected Void call() throws Exception {
+                // Giả lập các bước loading
+                updateMessage("Đang tải cấu hình...");
+                Thread.sleep(800); // Ngủ 800ms
+
+                updateMessage("Kiểm tra thư viện...");
+                Thread.sleep(800);
+
+                updateMessage("Khởi động giao diện...");
+                Thread.sleep(600);
+
+                return null;
+            }
+        };
+
+        // Liên kết Task với UI của Splash
+        // (Task chạy ở thread khác, nhưng updateMessage sẽ gửi về UI thread an toàn)
+        controller.loadingMessageProperty().bind(task.messageProperty());
+
+        // Khi Task hoàn thành -> Đóng Splash -> Mở Main App
+        task.setOnSucceeded(e -> {
+            splashStage.close(); // Đóng splash
+            try {
+                showMainApplication(primaryStage); // Mở app chính
+            } catch (IOException ex) {
+                ex.printStackTrace();
+            }
+        });
+
+        // Chạy task
+        new Thread(task).start();
+    }
+
+    private void showMainApplication(Stage primaryStage) throws IOException {
         // 1. Dọn dẹp rác từ lần chạy trước (kể cả khi bị tắt đột ngột)
         performStartupCleanup();
 
@@ -62,6 +131,14 @@ public class App extends Application {
             // Lưu ý: Nút Stop IDE vẫn có thể bỏ qua cái này, nhưng có còn hơn không.
             performStartupCleanup();
         }));
+
+        try {
+            // Lưu ý đường dẫn bắt đầu bằng dấu / (tính từ thư mục resources)
+            Image icon = new Image(getClass().getResourceAsStream("/com/stukit/codebench/icons/logo64.png"));
+            primaryStage.getIcons().add(icon);
+        } catch (Exception e) {
+            System.out.println("Lỗi không tìm thấy file icon: " + e.getMessage());
+        }
 
         primaryStage.show();
     }
@@ -93,14 +170,13 @@ public class App extends Application {
      */
     private void loadCustomFonts() {
         loadFont(FONT_CODE_PATH, 12);
-        loadFont(FONT_UI_PATH, 12);
     }
 
     private void loadFont(String path, double size) {
         try (InputStream stream = getClass().getResourceAsStream(path)) {
             if (stream != null) {
                 Font font = Font.loadFont(stream, size);
-                // System.out.println("Loaded font: " + font.getFamily()); // Uncomment để debug
+                System.out.println("Loaded font: " + font.getFamily()); // Uncomment để debug
             } else {
                 System.err.println("Warning: Could not find font at " + path);
             }

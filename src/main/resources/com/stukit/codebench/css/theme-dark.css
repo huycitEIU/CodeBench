@@ -180,3 +180,99 @@
     -fx-text-fill: white;
     -fx-border-color: transparent;
 }
+/* --- HELP WINDOW (DARK THEME) --- */
+
+/* Khung viền và nền chung đã được .root xử lý, nhưng ta chỉnh chi tiết */
+.header-panel {
+    -fx-background-color: #333333;
+    -fx-border-color: #444444;
+    -fx-border-width: 0 0 1 0;
+}
+
+.header-title {
+    -fx-text-fill: white;
+}
+
+/* Sidebar bên trái */
+.sidebar {
+    -fx-background-color: #333333;
+}
+
+.sidebar-title {
+    -fx-text-fill: #888888;
+}
+
+.topic-list {
+    -fx-background-color: #333333;
+    -fx-control-inner-background: #333333;
+    -fx-background-insets: 0;
+    -fx-padding: 5 0 0 0;
+}
+.topic-list .list-cell {
+    -fx-text-fill: #bbbbbb;
+}
+.topic-list .list-cell:filled:selected, .topic-list .list-cell:filled:hover {
+    -fx-background-color: #4b6eaf;
+    -fx-text-fill: white;
+}
+
+/* Nội dung bên phải */
+.content-scroll-pane, .content-scroll-pane .viewport {
+    -fx-background-color: #2b2b2b;
+}
+
+.content-area {
+    -fx-background-color: #2b2b2b;
+}
+
+.content-title {
+    -fx-text-fill: #4a90e2; /* Xanh dương sáng */
+}
+
+.content-body {
+    -fx-text-fill: #dddddd; /* Xám trắng */
+}
+
+/* Footer và Nút đóng */
+.footer-panel {
+    -fx-background-color: #333333;
+    -fx-border-color: #444444;
+    -fx-border-width: 1 0 0 0;
+}
+
+.btn-close {
+    -fx-background-color: #555555;
+    -fx-text-fill: white;
+}
+.btn-close:hover {
+    -fx-background-color: #666666;
+}
+
+/* --- CẤU HÌNH MENU ITEM --- */
+
+.context-menu {
+    /* Đặt chiều rộng tối thiểu cho toàn bộ bảng menu xổ xuống */
+    /*-fx-min-width: 200px;*/
+    /*-fx-background-color: #3c3f41; !* Đổi màu nền *!*/
+    /*-fx-background-radius: 5px;    !* Bo tròn góc cái hộp *!*/
+    -fx-border-color: #555555;     /* Viền màu xám */
+    /*-fx-border-radius: 5px;        !* Bo tròn viền *!*/
+    -fx-padding: 5px 0 5px 0;      /* Khoảng cách đệm trên/dưới */
+}
+
+.menu-item {
+    /* Tăng khoảng cách lề: Trên - Phải - Dưới - Trái */
+    /* Tăng số thứ 2 (Phải) và số thứ 4 (Trái) lên để rộng hơn */
+    -fx-padding: 8 20 8 20;
+}
+
+/* Tăng khoảng cách giữa "Tên lệnh" và "Phím tắt" */
+.menu-item .label {
+    -fx-padding: 0 30 0 0; /* Đẩy phím tắt ra xa một chút */
+}
+
+/* Trang trí riêng cho phần hiển thị phím tắt (nếu muốn đẹp hơn) */
+.menu-item .accelerator-text {
+    -fx-font-size: 11px;
+    -fx-text-fill: #777777; /* Màu xám nhạt cho đỡ rối mắt */
+}

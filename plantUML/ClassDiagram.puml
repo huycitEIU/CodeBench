@@ -1,58 +1,88 @@
-@startuml CodeBench_Architecture_V2
+@startuml CodeBench_Architecture_Final
 
 skinparam classAttributeIconSize 0
 skinparam linetype ortho
+skinparam packageStyle rectangle
 
+' --- DOMAIN LAYER ---
 package "Domain (Model)" {
-    class TestCase {
-        - name: String
-        - inputPath: Path
-        - expectedOutputPath: Path
-        - timeLimit: long
+    class TestCase <<record>> {
+        + name(): String
+        + inputPath(): Path
+        + expectedOutputPath(): Path
+    }
+
+    class RunResult <<record>> {
+        + isTimeout: boolean
+        + exitCode: int
+        + runTimeMs: long
+        + memoryBytes: long
+        + stdoutPath: Path
+        + stderrPath: Path
     }
 
     class JudgeResult {
         - status: Verdict
         - runTimeMs: long
+        - memoryBytes: long
         - actualOutputPath: Path
         - message: String
+        __ Static Factories __
+        + {static} fromExecution(...)
+        + {static} fromError(...)
     }
 
     enum Verdict {
-        PASSED
-        FAILED
-        TLE
-        RTE
-        CE
+        PASSED("AC")
+        FAILED("WA")
+        TLE("TLE")
+        RUNTIME_ERROR("RTE")
+        COMPILE_ERROR("CE")
+        SYSTEM_ERROR("SE")
     }
 }
 
+' --- UI LAYER ---
 package "UI Layer" {
     class MainController {
-        - testCases: List<TestCase>
-        - tblResultData: ObservableList<TestResultRow>
-        + onRunClicked()
-        + onOpenTestDetail()
+        - txtTimeLimit: TextField
+        - txtMemoryLimit: TextField
+        - tblResultData: ObservableList
+        + onRunClicked() : void
+        note: Creates BatchJudgeTask\nto prevent UI freezing
+    }
+
+    class BatchJudgeTask <<Task<Void>>> {
+        - session: JudgeSession
+        - rows: List<TestResultRow>
+        + call() : Void
+        note: Updates UI via\nPlatform.runLater()
     }
 
     class TestResultRow {
         - originalTestCase: TestCase
-        - actualOutputPath: Path
-        - status: SimpleStringProperty
-        + updateResult(status, time, path)
-        + getExpectedOutputPath(): Path
-        + getActualOutputPath(): Path
+        - status: StringProperty
+        - runtime: StringProperty
+        - memory: StringProperty
+        + updateResult(status, time, mem, path)
+    }
+
+    class ViewHelper <<Utility>> {
+        + {static} showDiffDialog(...)
+        + {static} showError(...)
     }
 }
 
+' --- SERVICE LAYER ---
 package "Service Layer" {
     class JudgeService {
-        + createSession(): JudgeSession
+        + createSession(code, time, mem): JudgeSession
     }
 
     class JudgeSession {
         - workspace: Workspace
         - sandbox: Sandbox
+        - isCompiled: boolean
         + compile()
         + runTestCase(TestCase): JudgeResult
         + close()
@@ -60,44 +90,83 @@ package "Service Layer" {
 
     class FileIOService {
         + readString(Path): String
-        + writeString(Path, String)
-        + readPreview(Path, limit): String
-        + deletePath(Path)
+        + readPreview(Path): String
+    }
+
+    class TestCaseImportService {
+        + loadTestCasesFromFolder(File): List<TestCase>
     }
 }
 
+' --- INFRASTRUCTURE ---
 package "Infrastructure" {
+    interface Sandbox {
+        + apply(ProcessBuilder)
+    }
+
+    class LocalSandbox implements Sandbox {
+        - memoryLimitBytes: long
+        + apply(ProcessBuilder)
+        note: Injects -Xmx flag\nfor Java processes
+    }
+
     class JavaRunner {
-        + run(File, input, Sandbox): RunResult
+        + run(inputPath, Sandbox): RunResult
     }
 
-    class TempWorkspace {
-        - root: Path
-        + write()
-        + resolve()
+    class ProcessMemoryMonitor <<Thread>> {
+        - process: Process
+        - peakMemory: long
+        + run()
+        + getPeakMemoryBytes(): long
+        note: Polling process memory\nvia OS commands (ps/tasklist)
+    }
+
+    interface Workspace {
+        + getRoot(): Path
         + close()
-        note: Fix stream leak here
     }
 
-    class DefaultOutputParser {
+    class TempWorkspace implements Workspace {
+        + close()
+        note: Auto-delete folder\non close
+    }
+
+    interface OutputParser {
         + normalize(String): String
     }
+
+    class DefaultOutputParser implements OutputParser
+    class JavaCompilerService
 }
 
-' Relationships
-MainController --> JudgeService
-MainController --> FileIOService : "Read preview for UI"
-MainController o-- TestResultRow : "Manages"
-TestResultRow *-- TestCase : "Wraps"
+' --- RELATIONSHIPS ---
 
-JudgeService ..> JudgeSession : "Creates"
+' UI -> Service / Domain
+MainController ..> JudgeService : "Init"
+MainController ..> BatchJudgeTask : "Starts"
+MainController ..> TestCaseImportService : "Uses"
+MainController ..> ViewHelper : "Uses"
+BatchJudgeTask --> JudgeSession : "Controls"
+BatchJudgeTask o-- TestResultRow : "Updates"
+TestResultRow *-- TestCase
+
+' Service -> Infrastructure / Domain
+JudgeService *-- JudgeSession : "Creates Inner Class"
+JudgeSession --> JavaCompilerService : "Uses"
 JudgeSession --> JavaRunner : "Uses"
-JudgeSession --> TempWorkspace : "Manages Lifecycle"
-JudgeSession --> DefaultOutputParser : "Uses"
-JudgeSession --> FileIOService : "Read for compare"
+JudgeSession --> Workspace : "Manages"
+JudgeSession --> Sandbox : "Uses"
+JudgeSession --> OutputParser : "Uses"
 JudgeSession ..> JudgeResult : "Produces"
 
-JavaRunner ..> FileIOService : "Read stdout/stderr"
+' Infrastructure Internal
+JavaRunner ..> ProcessMemoryMonitor : "Spawns"
+JavaRunner ..> RunResult : "Returns"
+LocalSandbox ..> Workspace : "Points to"
+
+' Domain Connections
 JudgeResult *-- Verdict
+JudgeResult ..> RunResult : "Mapped from"
 
 @enduml

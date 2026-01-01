@@ -38,16 +38,11 @@ public class ManualTestController {
             // 1. Lấy thư mục gốc giống với MainController ("./temp-workspaces")
             Path rootWorkspace = Path.of("./temp-workspaces");
 
-            // 2. Tạo thư mục con "manual" bên trong đó
-            // Cấu trúc: ./temp-workspaces/manual/{timestamp}/...
-            Path manualDir = rootWorkspace.resolve("manual")
-                    .resolve(String.valueOf(System.currentTimeMillis()));
+            // 2. Tạo thư mục con "manual"
+            Path manualDir = rootWorkspace.resolve("manual");
 
-            // Java sẽ tự động tạo cả thư mục cha nếu chưa có
-            Files.createDirectories(manualDir);
-
-            Path inputPath = manualDir.resolve("input.txt");
-            Path expectedPath = manualDir.resolve("expected.txt");
+            Path inputPath = manualDir.resolve(name + "_input.txt");
+            Path expectedPath = manualDir.resolve(name + "_expected.txt");
 
             // Ghi file
             if (fileService != null) {

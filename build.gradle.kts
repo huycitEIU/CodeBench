@@ -98,7 +98,6 @@ tasks.register<Exec>("createPortable") {
         "--main-class", "com.stukit.codebench.Launcher",
         "--main-jar", inputJar,
         "--icon", "app.ico",
-        "--win-console"
     )
 
     // --- BƯỚC MỚI: COPY CÁC CÔNG CỤ CẦN THIẾT VÀO RUNTIME ---

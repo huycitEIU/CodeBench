@@ -39,7 +39,8 @@ public class ManualTestController {
             Path rootWorkspace = Path.of("./temp-workspaces");
 
             // 2. Tạo thư mục con "manual"
-            Path manualDir = rootWorkspace.resolve("manual");
+            Path manualDir = rootWorkspace.resolve("manual")
+                    .resolve(String.valueOf(System.currentTimeMillis()));
 
             Path inputPath = manualDir.resolve(name + "_input.txt");
             Path expectedPath = manualDir.resolve(name + "_expected.txt");

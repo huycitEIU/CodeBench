@@ -122,7 +122,7 @@ public class ViewHelper {
     private void setIcon(Stage stage) {
         try {
             // Lưu ý đường dẫn bắt đầu bằng dấu / (tính từ thư mục resources)
-            Image icon = new Image(getClass().getResourceAsStream("/com/stukit/codebench/icons/logo64.png"));
+            Image icon = new Image(getClass().getResourceAsStream("/com/stukit/codebench/assets/logo64.png"));
             stage.getIcons().add(icon);
         } catch (Exception e) {
             System.out.println("Lỗi không tìm thấy file icon: " + e.getMessage());

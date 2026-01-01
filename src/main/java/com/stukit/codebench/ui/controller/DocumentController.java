@@ -25,11 +25,11 @@ public class DocumentController {
     };
 
     private final String[] CONTENTS = {
-            "Chào mừng bạn đến với CodeBench!\n\nĐây là công cụ hỗ trợ chấm bài tự động...",
-            "Để thêm testcase:\n1. Nhấn nút 'Import Testcase'.\n2. Chọn file .zip hoặc folder...",
-            "Bạn có thể viết code trực tiếp hoặc mở file có sẵn...",
-            "Giới hạn thời gian (Time Limit) mặc định là 1000ms...",
-            "Ctrl+S: Lưu file\nCtrl+R: Chạy chương trình..."
+            "Chào mừng bạn đến với CodeBench!\n\nĐây là công cụ hỗ trợ chấm bài tự động",
+            "Để thêm testcase:\n1. Nhấn nút 'Import Testcase'.\n2. Chọn folder chứa testcase",
+            "Bạn có thể viết code trực tiếp hoặc mở file có sẵn",
+            "Giới hạn thời gian (Time Limit) mặc định là 1000ms",
+            "Ctrl+O: Import file code\nCtrl+T: Thêm thư mục chứa testcase\nF5: Chạy test"
     };
 
     private ObservableList<String> items;

@@ -35,8 +35,7 @@ public class App extends Application {
     // Đường dẫn Resource
     private static final String FXML_PATH = "/com/stukit/codebench/fxml/main.fxml";
     private static final String CSS_PATH = "/com/stukit/codebench/css/theme-light.css";
-    private static final String FONT_CODE_PATH = "/com/stukit/codebench/fonts/JetBrainsMono-Medium.ttf";
-    private static final String FONT_UI_PATH = "/com/stukit/codebench/fonts/Inter-Regular.ttf";
+    private static final String FONT_CODE_PATH = "/com/stukit/codebench/assets/JetBrainsMono-Medium.ttf";
 
     @Override
     public void start(Stage primaryStage) throws IOException {
@@ -60,7 +59,7 @@ public class App extends Application {
 
         try {
             // Lưu ý đường dẫn bắt đầu bằng dấu / (tính từ thư mục resources)
-            Image icon = new Image(getClass().getResourceAsStream("/com/stukit/codebench/icons/logo64.png"));
+            Image icon = new Image(getClass().getResourceAsStream("/com/stukit/codebench/assets/logo64.png"));
             splashStage.getIcons().add(icon);
         } catch (Exception e) {
             System.out.println("Lỗi không tìm thấy file icon: " + e.getMessage());
@@ -134,7 +133,7 @@ public class App extends Application {
 
         try {
             // Lưu ý đường dẫn bắt đầu bằng dấu / (tính từ thư mục resources)
-            Image icon = new Image(getClass().getResourceAsStream("/com/stukit/codebench/icons/logo64.png"));
+            Image icon = new Image(getClass().getResourceAsStream("/com/stukit/codebench/assets/logo64.png"));
             primaryStage.getIcons().add(icon);
         } catch (Exception e) {
             System.out.println("Lỗi không tìm thấy file icon: " + e.getMessage());

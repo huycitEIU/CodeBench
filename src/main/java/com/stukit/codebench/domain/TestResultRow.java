@@ -37,11 +37,11 @@ public class TestResultRow {
     /**
      * Cập nhật kết quả cuối cùng (Sau khi chấm xong).
      */
-    public void updateResult(String statusText, long timeMs, long memBytes, Path actualOutput) {
+    public void updateResult(String statusText, long timeMs, long memoryBytes, Path actualOutput) {
         this.status.set(statusText);
         this.runtime.set(timeMs + " ms");
         // Convert Bytes sang KB hoặc MB cho dễ đọc
-        double memMB = memBytes / 1024.0 / 1024.0;
+        double memMB = memoryBytes / 1024.0 / 1024.0;
         this.memory.set(String.format("%.2f MB", memMB));
         this.actualOutputPath = actualOutput;
     }

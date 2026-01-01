@@ -14,7 +14,7 @@ public class DefaultOutputParser implements OutputParser {
     public String normalize(String raw) {
         if (raw == null) return "";
 
-        // 1. stripTrailing(): Xoá space/newline thừa ở CỐI file (Java 11+)
+        // 1. stripTrailing(): Xoá space/newline thừa ở CUỐI file (Java 11+)
         // 2. replaceAll("\\R", "\n"): Chuẩn hoá mọi loại xuống dòng về \n
         return raw.stripTrailing().replaceAll("\\R", "\n");
     }
